@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>예약 관리 — EVSPOT</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { ev: { black:'#0A0A0A', white:'#F5F5F0', green:'#00E676', lime:'#C6F135', gray:'#1C1C1C', muted:'#6B6B6B', border:'#2A2A2A' } },
+        fontFamily: { sans:['DM Sans','Noto Sans KR','sans-serif'], mono:['Space Grotesk','monospace'] },
+      }}
+    }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    body{background:#0A0A0A;color:#F5F5F0;font-family:'DM Sans','Noto Sans KR',sans-serif;-webkit-font-smoothing:antialiased}
+    .nav-blur{backdrop-filter:blur(20px);background:rgba(10,10,10,.9);border-bottom:1px solid rgba(255,255,255,.07)}
+    .btn-primary{background:#00E676;color:#0A0A0A;font-weight:700;transition:all .2s}
+    .btn-primary:hover{background:#C6F135;transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,230,118,.35)}
+    .btn-outline{border:1.5px solid #2A2A2A;color:#F5F5F0;transition:all .2s}
+    .btn-outline:hover{border-color:#00E676;color:#00E676}
+    .badge-available{background:rgba(0,230,118,.15);color:#00E676}
+    .badge-busy     {background:rgba(255,82,82,.15); color:#FF5252}
+    .badge-charging {background:rgba(255,193,7,.15); color:#FFC107}
+    .badge-muted    {border:1px solid #2A2A2A;       color:#6B6B6B}
+    .card-dark{background:#1C1C1C;border:1px solid #2A2A2A;border-radius:16px;transition:border-color .2s}
+    .card-dark:hover{border-color:rgba(0,230,118,.3)}
+    .tab-btn{padding:8px 20px;border-radius:99px;font-size:13px;color:#6B6B6B;transition:all .2s;cursor:pointer}
+    .tab-btn.active{background:rgba(0,230,118,.12);color:#00E676;font-weight:600}
+    .tab-btn:hover:not(.active){color:#F5F5F0}
+
+    /* 모달 */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s;padding:16px}
+    .modal-overlay.open{opacity:1;pointer-events:all}
+    .modal-box{background:#1C1C1C;border:1px solid #2A2A2A;border-radius:20px;width:100%;max-width:440px;padding:28px;transform:scale(.95);transition:transform .3s}
+    .modal-overlay.open .modal-box{transform:scale(1)}
+
+    /* 타임라인 */
+    .timeline-dot{width:10px;height:10px;border-radius:50%;margin-top:4px;flex-shrink:0}
+    .timeline-line{width:2px;background:#2A2A2A;flex-shrink:0;margin:0 auto}
+
+    /* 토스트 */
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1C1C1C;border:1px solid #00E676;color:#F5F5F0;padding:14px 24px;border-radius:12px;font-size:14px;z-index:200;transition:transform .3s;white-space:nowrap}
+    .toast.show{transform:translateX(-50%) translateY(0)}
+
+    /* 빈 상태 */
+    .empty-state{text-align:center;padding:60px 20px;color:#6B6B6B}
+
+    /* 스크롤바 */
+    ::-webkit-scrollbar{width:4px}
+    ::-webkit-scrollbar-thumb{background:#2A2A2A;border-radius:99px}
+  </style>
+</head>
+
+<body class="min-h-screen">
+
+  <!-- NAV -->
+  <nav class="nav-blur sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto px-6 flex items-center justify-between h-16">
+      <a href="index.html" class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-ev-green flex items-center justify-center">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="#0A0A0A"/></svg>
+        </div>
+        <span class="font-mono font-bold text-lg">EV<span class="text-ev-green">SPOT</span></span>
+      </a>
+      <div class="hidden md:flex gap-8 text-sm text-ev-muted">
+        <a href="map.html" class="hover:text-ev-white transition-colors">충전소 찾기</a>
+        <a href="reservation.html" class="text-ev-green font-medium">예약 관리</a>
+        <a href="mypage.html" class="hover:text-ev-white transition-colors">마이페이지</a>
+      </div>
+      <a href="map.html" class="btn-primary px-4 py-2 rounded-full text-sm">+ 새 예약</a>
+    </div>
+  </nav>
+
+
+  <main class="max-w-5xl mx-auto px-6 py-10">
+
+    <!-- 페이지 헤더 -->
+    <div class="mb-8">
+      <p class="text-ev-green text-sm font-mono font-medium mb-1">// 예약 관리</p>
+      <h1 class="text-3xl font-bold">나의 예약 현황</h1>
+    </div>
+
+    <!-- 요약 카드 4개 -->
+    <div id="summaryCards" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10"></div>
+
+    <!-- 탭 -->
+    <div class="flex gap-1 mb-6 border-b border-ev-border pb-4">
+      <button class="tab-btn active" onclick="setTab('all',this)">전체</button>
+      <button class="tab-btn" onclick="setTab('confirmed',this)">예약 확정</button>
+      <button class="tab-btn" onclick="setTab('pending',this)">대기 중</button>
+      <button class="tab-btn" onclick="setTab('completed',this)">완료</button>
+      <button class="tab-btn" onclick="setTab('cancelled',this)">취소됨</button>
+    </div>
+
+    <!-- 예약 목록 -->
+    <div id="reservationList" class="space-y-4"></div>
+  </main>
+
+
+  <!-- 상세 모달 -->
+  <div id="modalOverlay" class="modal-overlay" onclick="closeModalOutside(event)">
+    <div class="modal-box" id="modalBox">
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <!-- 취소 확인 모달 -->
+  <div id="cancelOverlay" class="modal-overlay" onclick="closeCancelOutside(event)">
+    <div class="modal-box max-w-sm">
+      <h3 class="text-lg font-bold mb-2">예약을 취소할까요?</h3>
+      <p class="text-ev-muted text-sm mb-6">취소된 예약은 복구할 수 없어요.</p>
+      <div class="flex gap-3">
+        <button onclick="closeCancelModal()" class="btn-outline flex-1 py-2.5 rounded-xl text-sm">돌아가기</button>
+        <button id="confirmCancelBtn" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:#FF5252;color:white">취소 확정</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 토스트 -->
+  <div id="toast" class="toast"></div>
+
+  <script src="js/data.js"></script>
+  <script>
+    let currentTab = 'all';
+    let cancelTargetId = null;
+
+    const statusCfg = {
+      confirmed: { label:'예약 확정', cls:'badge-available', icon:'✅' },
+      pending:   { label:'대기 중',   cls:'badge-charging',  icon:'⏳' },
+      completed: { label:'완료',      cls:'badge-muted',     icon:'🔋' },
+      cancelled: { label:'취소됨',    cls:'badge-busy',      icon:'❌' },
+    };
+
+    // ── 탭 ──────────────────────────────────────────────
+    function setTab(tab, el) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      renderList();
+    }
+
+    // ── 요약 카드 ────────────────────────────────────────
+    function renderSummary() {
+      const all = EVUtils.getLocalReservations();
+      const counts = { confirmed:0, pending:0, completed:0, cancelled:0 };
+      all.forEach(r => counts[r.status] = (counts[r.status]||0)+1);
+
+      const items = [
+        { label:'예약 확정', value: counts.confirmed, color:'#00E676', icon:'✅' },
+        { label:'대기 중',   value: counts.pending,   color:'#FFC107', icon:'⏳' },
+        { label:'완료',      value: counts.completed, color:'#6B6B6B', icon:'🔋' },
+        { label:'취소됨',    value: counts.cancelled, color:'#FF5252', icon:'❌' },
+      ];
+
+      document.getElementById('summaryCards').innerHTML = items.map(item => `
+        <div class="card-dark p-5">
+          <p class="text-2xl mb-1">${item.icon}</p>
+          <p class="text-2xl font-bold font-mono" style="color:${item.color}">${item.value}</p>
+          <p class="text-ev-muted text-xs mt-1">${item.label}</p>
+        </div>`).join('');
+    }
+
+    // ── 예약 목록 ────────────────────────────────────────
+    function renderList() {
+      const all = EVUtils.getLocalReservations();
+      const filtered = currentTab === 'all' ? all : all.filter(r => r.status === currentTab);
+
+      if (!filtered.length) {
+        document.getElementById('reservationList').innerHTML = `
+          <div class="empty-state">
+            <p class="text-4xl mb-4">🔋</p>
+            <p class="font-medium text-ev-white mb-1">예약 내역이 없어요</p>
+            <p class="text-sm">충전소를 찾아 예약해보세요!</p>
+            <a href="map.html" class="btn-primary inline-block mt-4 px-6 py-2.5 rounded-full text-sm">충전소 찾기</a>
+          </div>`;
+        return;
+      }
+
+      document.getElementById('reservationList').innerHTML = filtered.map(r => reservationCard(r)).join('');
+    }
+
+    function reservationCard(r) {
+      const cfg = statusCfg[r.status];
+      const canCancel = r.status === 'confirmed' || r.status === 'pending';
+
+      return `
+        <div class="card-dark p-5 cursor-pointer" onclick="openDetail('${r.id}')">
+          <div class="flex items-start justify-between gap-3">
+            <!-- 왼쪽 -->
+            <div class="flex gap-4 flex-1 min-w-0">
+              <!-- 아이콘 -->
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-lg" style="background:rgba(0,230,118,.1)">
+                ⚡
+              </div>
+              <!-- 정보 -->
+              <div class="min-w-0">
+                <p class="font-semibold text-ev-white text-sm truncate">${r.stationName}</p>
+                <p class="text-ev-muted text-xs mt-0.5">
+                  ${EVUtils.formatDate(r.date)} · ${r.timeSlot}
+                </p>
+                <p class="text-ev-muted text-xs mt-0.5">${r.chargerType} · ${r.vehicle}</p>
+              </div>
+            </div>
+            <!-- 오른쪽 -->
+            <div class="text-right shrink-0">
+              <span class="${cfg.cls} text-xs px-2.5 py-1 rounded-full font-medium block mb-2">${cfg.label}</span>
+              <p class="text-ev-white text-sm font-medium">${r.estimatedFee}</p>
+            </div>
+          </div>
+
+          ${canCancel ? `
+          <div class="flex gap-2 mt-4 pt-4 border-t border-ev-border" onclick="event.stopPropagation()">
+            <button onclick="openDetail('${r.id}')" class="btn-outline flex-1 py-2 rounded-xl text-xs">상세 보기</button>
+            <button onclick="openCancelModal('${r.id}')" class="flex-1 py-2 rounded-xl text-xs border font-medium" style="border-color:#FF5252;color:#FF5252;transition:all .2s" onmouseover="this.style.background='rgba(255,82,82,.1)'" onmouseout="this.style.background=''">예약 취소</button>
+          </div>` : `
+          <div class="flex gap-2 mt-4 pt-4 border-t border-ev-border" onclick="event.stopPropagation()">
+            <button onclick="openDetail('${r.id}')" class="btn-outline flex-1 py-2 rounded-xl text-xs">상세 보기</button>
+            ${r.status === 'completed' ? `<a href="map.html" class="btn-primary flex-1 py-2 rounded-xl text-xs text-center">재예약</a>` : ''}
+          </div>`}
+        </div>`;
+    }
+
+    // ── 상세 모달 ────────────────────────────────────────
+    function openDetail(id) {
+      const all = EVUtils.getLocalReservations();
+      const r   = all.find(rv => rv.id === id);
+      if (!r) return;
+      const cfg = statusCfg[r.status];
+      const station = EV_DATA.stations.find(s => s.id === r.stationId);
+
+      document.getElementById('modalContent').innerHTML = `
+        <div class="space-y-5">
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="${cfg.cls} text-xs px-2.5 py-1 rounded-full font-medium">${cfg.label}</span>
+              <h2 class="text-xl font-bold mt-2">${r.stationName}</h2>
+            </div>
+            <button onclick="closeModal()" class="text-ev-muted hover:text-ev-white p-1">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <!-- 타임라인 -->
+          <div class="bg-ev-black/40 rounded-xl p-5 space-y-4">
+            <div class="flex gap-3">
+              <div class="flex flex-col items-center">
+                <div class="timeline-dot" style="background:#00E676"></div>
+                <div class="timeline-line h-8 mt-1"></div>
+              </div>
+              <div>
+                <p class="text-xs text-ev-muted">예약 날짜</p>
+                <p class="text-sm font-medium text-ev-white">${EVUtils.formatDate(r.date)}</p>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <div class="flex flex-col items-center">
+                <div class="timeline-dot" style="background:#00E676"></div>
+                <div class="timeline-line h-8 mt-1"></div>
+              </div>
+              <div>
+                <p class="text-xs text-ev-muted">예약 시간</p>
+                <p class="text-sm font-medium text-ev-white">${r.timeSlot}</p>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <div class="timeline-dot" style="background:#6B6B6B;margin-top:4px"></div>
+              <div>
+                <p class="text-xs text-ev-muted">충전 완료 (예상)</p>
+                <p class="text-sm text-ev-muted">${r.timeSlot.split(' ')[2]}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 상세 정보 -->
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div class="bg-ev-black/40 rounded-xl p-4">
+              <p class="text-ev-muted text-xs mb-1">차량</p>
+              <p class="text-ev-white font-medium">${r.vehicle}</p>
+            </div>
+            <div class="bg-ev-black/40 rounded-xl p-4">
+              <p class="text-ev-muted text-xs mb-1">충전 타입</p>
+              <p class="text-ev-white font-medium">${r.chargerType}</p>
+            </div>
+            <div class="bg-ev-black/40 rounded-xl p-4">
+              <p class="text-ev-muted text-xs mb-1">예상 요금</p>
+              <p class="font-bold" style="color:#00E676">${r.estimatedFee}</p>
+            </div>
+            <div class="bg-ev-black/40 rounded-xl p-4">
+              <p class="text-ev-muted text-xs mb-1">예약 번호</p>
+              <p class="text-ev-white font-mono text-xs">${r.id}</p>
+            </div>
+          </div>
+
+          ${station ? `<p class="text-ev-muted text-xs">${station.address} · ${station.phone}</p>` : ''}
+
+          <div class="flex gap-2 pt-2">
+            ${(r.status==='confirmed'||r.status==='pending') ? `
+              <button onclick="closeModal();openCancelModal('${r.id}')" class="flex-1 py-2.5 rounded-xl text-xs border font-medium" style="border-color:#FF5252;color:#FF5252">예약 취소</button>
+              <a href="map.html" class="btn-primary flex-1 py-2.5 rounded-xl text-xs text-center">충전소 보기</a>
+            ` : `
+              <button onclick="closeModal()" class="btn-outline flex-1 py-2.5 rounded-xl text-xs">닫기</button>
+              ${r.status==='completed' ? `<a href="map.html" class="btn-primary flex-1 py-2.5 rounded-xl text-xs text-center">재예약</a>` : ''}
+            `}
+          </div>
+        </div>`;
+
+      document.getElementById('modalOverlay').classList.add('open');
+    }
+
+    function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+    function closeModalOutside(e) { if (e.target===document.getElementById('modalOverlay')) closeModal(); }
+
+    // ── 취소 모달 ────────────────────────────────────────
+    function openCancelModal(id) {
+      cancelTargetId = id;
+      document.getElementById('cancelOverlay').classList.add('open');
+      document.getElementById('confirmCancelBtn').onclick = () => doCancel(id);
+    }
+    function closeCancelModal() { document.getElementById('cancelOverlay').classList.remove('open'); }
+    function closeCancelOutside(e) { if (e.target===document.getElementById('cancelOverlay')) closeCancelModal(); }
+
+    function doCancel(id) {
+      EVUtils.cancelReservation(id);
+      closeCancelModal();
+      renderSummary();
+      renderList();
+      showToast('❌ 예약이 취소되었습니다.');
+    }
+
+    // ── 토스트 ───────────────────────────────────────────
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(()=>t.classList.remove('show'), 3000);
+    }
+
+    // ── 초기화 ───────────────────────────────────────────
+    renderSummary();
+    renderList();
+  </script>
+</body>
+</html>
