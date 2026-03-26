@@ -27,12 +27,14 @@ public class ReservationService {
         long activeCount = reservationRepository.countByMemberIdAndStatusIn(
                 memberId, List.of("RESERVED" , "CHARGING")
         );
+        //한개의 계정에서 2개 이상의 예약이 생길때 예외처리
         if (activeCount >= 2){
             throw  new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 2건의 활성 예약이 존재하여 더 이상 예약 할 수 없습니다.");
         }
+        //급속 및 완속충전 종류에따라 시간 더하기
         int durationHours = "RAPID".equalsIgnoreCase(req.getChargerType())? 1 : 7;
         LocalDateTime calculatedEndTime = req.getStartTime().plusHours(durationHours);
-
+        //시간 겹침 방지
         boolean isOverlapped = reservationRepository.existsOverlappingReservation(
                 req.getChargerId(), req.getStartTime(), calculatedEndTime
         );

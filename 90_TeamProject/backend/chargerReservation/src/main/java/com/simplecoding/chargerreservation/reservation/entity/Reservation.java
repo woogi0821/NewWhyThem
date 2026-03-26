@@ -38,6 +38,9 @@ public class Reservation extends BaseTimeEntity {
     @Column(name = "END_TIME", nullable = false)
     private LocalDateTime endTime;
 
+    @Column(name = "ACTUAL_END_TIME", nullable = true)
+    private LocalDateTime actualEndTime;
+
     @Column(name = "STATUS", nullable = false, length = 20)
     private String status;
 
@@ -46,13 +49,22 @@ public class Reservation extends BaseTimeEntity {
     private Long version;
 
     @Builder
-    public Reservation(Long memberId, String chargerId, String carNumber, String reservationPin, LocalDateTime startTime, LocalDateTime endTime, String status){
+    public Reservation(Long memberId, String chargerId, String carNumber, String reservationPin, LocalDateTime startTime, LocalDateTime endTime, LocalDateTime actualEndTime, String status){
         this.memberId = memberId;
         this.chargerId = chargerId;
         this.carNumber = carNumber;
         this.reservationPin = reservationPin;
         this.startTime = startTime;
         this.endTime = endTime;
+        this.actualEndTime = actualEndTime;
         this.status = status;
+    }
+
+    public void changeStatus(String newStatus){
+        this.status = newStatus;
+    }
+    public void endCharging(String newStatus, LocalDateTime now){
+        this.status = newStatus;
+        this.actualEndTime = now;
     }
 }

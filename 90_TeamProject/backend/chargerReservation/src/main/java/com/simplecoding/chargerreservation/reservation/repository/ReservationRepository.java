@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
@@ -30,5 +31,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @Param("startTime")LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime
             );
+
+    Optional<Reservation> findByChargerIdAndStatusAndReservationPin(String chargerId, String status, String reservationPin);
 
 }
