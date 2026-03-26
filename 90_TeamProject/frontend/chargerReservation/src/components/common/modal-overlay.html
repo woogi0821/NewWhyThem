@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV 충전소 모달 컴포넌트 테스트</title>
+    <style>
+        /* =========================================
+           여기는 'modal.css' 파일에 들어갈 내용입니다.
+           ========================================= */
+        
+        /* 1. 모달 전체를 덮는 어두운 배경 */
+        .modal-overlay {
+            position: fixed; /* 화면에 고정 */
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* 반투명 검은색 */
+            display: flex; /* 내부 모달박스를 중앙 정렬하기 위해 flex 사용 */
+            justify-content: center;
+            align-items: center;
+            z-index: 9999; /* 다른 요소들보다 무조건 맨 위에 오도록 설정 */
+            
+            /* 애니메이션 효과를 위해 기본은 숨김 처리 */
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        /* 자바스크립트로 .active 클래스를 붙이면 나타남 */
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* 2. 하얀색 모달 본체 */
+        .modal-container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px; /* 너무 넓어지지 않게 제한 */
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            overflow: hidden;
+            /* 창이 뜰 때 살짝 위에서 내려오는 효과 */
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active .modal-container {
+            transform: translateY(0);
+        }
+
+        /* 3. 모달 내부 구역 나누기 */
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #eeeeee;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-close-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #888;
+        }
+
+        .modal-body {
+            padding: 24px 20px;
+            font-size: 16px;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .modal-footer {
+            padding: 16px 20px;
+            background-color: #f9f9f9;
+            text-align: right;
+        }
+
+        /* 버튼 공통 스타일 */
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-secondary { background-color: #e0e0e0; color: #333; }
+
+        /* 로그인 폼 전용 스타일 */
+        .login-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box; /* 패딩포함 너비계산 */
+        }
+
+        /* 테스트 페이지용 스타일 (지환님이 신경 안 쓰셔도 됨) */
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 50px; background-color: #f0f4f8; }
+        .test-section { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+    <div class="test-section">
+        <h2>🛠️ 팀원들이 지환님의 모달을 사용하는 테스트 화면</h2>
+        <p>팀원들은 본인 페이지에서 아래 버튼들처럼 함수만 호출하면 됩니다.</p>
+        
+        <!-- 팀원들이 본인 기능에 맞게 호출할 버튼들 -->
+        <button class="btn btn-secondary" onclick="CustomModal.alert('예약이 성공적으로 완료되었습니다!', '예약 완료')">알림창(Alert) 띄우기</button>
+        <button class="btn btn-secondary" onclick="CustomModal.confirm('정말로 예약을 취소하시겠습니까?', function(){ alert('취소 로직 실행!'); })">컨펌창(Confirm) 띄우기</button>
+        <button class="btn btn-primary" onclick="CustomModal.login()">로그인창 띄우기</button>
+    </div>
+
+    <!-- =========================================
+         여기는 'modal.js' 파일에 들어갈 내용입니다.
+         모든 페이지의 맨 아래에 이 스크립트가 로드됩니다.
+         ========================================= -->
+    <script>
+        /**
+         * CustomModal 객체
+         * 지환님이 팀원들을 위해 만든 만능 모달 도구상자입니다.
+         * 자바스크립트로 HTML을 실시간으로 그려서 화면에 붙이는 방식입니다.
+         */
+        const CustomModal = {
+            
+            // 1. 공통으로 모달 HTML을 생성하고 화면에 띄우는 내부 함수
+            _open: function(title, bodyContent, footerContent) {
+                // 이미 열려있는 모달이 있다면 지웁니다.
+                this.close(); 
+
+                // 모달을 감싸는 최상위 div 생성
+                const overlay = document.createElement('div');
+                overlay.className = 'modal-overlay';
+                overlay.id = 'commonModal';
+
+                // 모달 내부 HTML 조립 (백틱 ` 을 사용하면 여러 줄 문자열 작성 가능)
+                overlay.innerHTML = `
+                    <div class="modal-container">
+                        <div class="modal-header">
+                            <span>${title}</span>
+                            <button class="modal-close-btn" onclick="CustomModal.close()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            ${bodyContent}
+                        </div>
+                        <div class="modal-footer">
+                            ${footerContent}
+                        </div>
+                    </div>
+                `;
+
+                // 완성된 모달을 웹페이지(body) 맨 끝에 추가
+                document.body.appendChild(overlay);
+
+                // CSS 애니메이션을 위해 아주 짧은 시간 뒤에 active 클래스 추가
+                setTimeout(() => {
+                    overlay.classList.add('active');
+                }, 10);
+            },
+
+            // 2. 창 닫기 기능
+            close: function() {
+                const existingModal = document.getElementById('commonModal');
+                if (existingModal) {
+                    existingModal.classList.remove('active');
+                    // 애니메이션 끝난 후 HTML에서 완전히 삭제
+                    setTimeout(() => {
+                        existingModal.remove();
+                    }, 300);
+                }
+            },
+
+            // =======================================================
+            // 아래부터가 팀원들이 실제로 가져다 쓸 'API(메서드)' 들입니다.
+            // =======================================================
+
+            // 3. 알림창 (Alert)
+            alert: function(message, title = '알림') {
+                const bodyHtml = `<p>${message}</p>`;
+                const footerHtml = `<button class="btn btn-primary" onclick="CustomModal.close()">확인</button>`;
+                this._open(title, bodyHtml, footerHtml);
+            },
+
+            // 4. 확인/취소창 (Confirm)
+            confirm: function(message, onConfirmCallback, title = '확인') {
+                const bodyHtml = `<p>${message}</p>`;
+                const footerHtml = `
+                    <button class="btn btn-secondary" onclick="CustomModal.close()">취소</button>
+                    <button class="btn btn-primary" id="modalConfirmBtn">확인</button>
+                `;
+                this._open(title, bodyHtml, footerHtml);
+
+                // 확인 버튼을 눌렀을 때 팀원이 넘겨준 함수(콜백)를 실행하게 연결
+                document.getElementById('modalConfirmBtn').addEventListener('click', () => {
+                    this.close();
+                    if(onConfirmCallback) onConfirmCallback();
+                });
+            },
+
+            // 5. 로그인창 (Login) - 지환님이 특별히 맡으신 부분!
+            login: function() {
+                const bodyHtml = `
+                    <form id="modalLoginForm">
+                        <input type="text" class="login-input" placeholder="아이디를 입력하세요" required>
+                        <input type="password" class="login-input" placeholder="비밀번호를 입력하세요" required>
+                    </form>
+                    <p style="font-size:12px; color:#888; margin-top:10px;">* 회원이 아니신가요? <a href="#">회원가입</a></p>
+                `;
+                const footerHtml = `
+                    <button class="btn btn-secondary" onclick="CustomModal.close()">닫기</button>
+                    <button class="btn btn-primary" onclick="alert('스프링부트 백엔드로 로그인 요청 전송!')">로그인</button>
+                `;
+                this._open('전기차 충전시스템 로그인', bodyHtml, footerHtml);
+            }
+        };
+    </script>
+</body>
+</html>
