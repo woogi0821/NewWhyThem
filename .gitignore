@@ -194,3 +194,75 @@ out/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# (기존의 Logs, Diagnostic reports, Runtime data... 항목들 생략)
+# ... 중략 ...
+
+# ==========================================
+# Security & Config (위치 기반 API 키 등 보안)
+# ==========================================
+# 지도 API 키나 DB 비밀번호가 담긴 설정 파일은 절대 올라가면 안 됩니다.
+*.properties
+*.yml
+# 단, 설정 샘플 파일은 예외로 두어 팀원들이 구조를 알게 합니다.
+!application.example.yml
+!application.example.properties
+
+# ==========================================
+# Backend (Spring Boot / Java / JPA / Oracle) 
+# ==========================================
+*.class
+
+# 빌드 결과물
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# 로그 및 크래시 리포트
+hs_err_pid*
+replay_pid*
+
+# ==========================================
+# Build Tools (Gradle / Maven)
+# ==========================================
+.gradle/
+build/
+target/
+out/
+!gradle/wrapper/gradle-wrapper.jar
+
+# ==========================================
+# IDE (IntelliJ IDEA & Eclipse & VS Code)
+# ==========================================
+.idea/
+*.iml
+*.iws
+*.ipr
+# workspace.xml이 계속 뜨는 걸 방지하기 위해 명시적 추가
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/shelf/
+
+# Eclipse & VS Code
+.project
+.classpath
+.settings/
+.factorypath
+.springBeans
+.sts4-cache/
+.vscode/
+
+# ==========================================
+# OS Generated Files
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
