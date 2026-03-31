@@ -48,7 +48,7 @@ export const useToast = () => {
     isVisible: false,
     message: "",
     variant: "info",
-    position: "top-right",
+    position: "bottom-center",
   });
 
   // ── 타이머 ────────────────────────────────

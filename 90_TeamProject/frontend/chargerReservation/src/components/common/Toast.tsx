@@ -57,6 +57,9 @@ interface ToastProps extends Omit<HTMLAttributes<HTMLDivElement>, "children"> {
 // ─────────────────────────────────────────────
 
 // variant별 Tailwind CSS 클래스를 딕셔너리(객체)로 관리
+// 시안 디자인에 맞게 테슬라 레드(#cc0000) 계열을 포인트로 사용
+// 흰 배경 + 좌측 컬러 보더 라인으로 언더라인 스타일과 통일감 있게 구성
+//
 // Record<ToastVariant, ...> 타입은 ToastVariant의 4가지 키가 모두 존재해야 함
 // 하나라도 빠지면 TypeScript 에러 → 실수 방지
 const variantStyles: Record<
@@ -64,29 +67,31 @@ const variantStyles: Record<
   { container: string; icon: string; iconPath: string }
 > = {
   success: {
-    // 배경색 / 테두리색 / 글자색
-    container: "bg-emerald-50 border-emerald-400 text-emerald-800",
-    // 아이콘 색상
-    icon: "text-emerald-500",
+    // 흰 배경 + 좌측 초록 라인 (성공)
+    container: "bg-white border-l-4 border-l-green-600 border-t-0 border-r-0 border-b-0",
+    icon: "text-green-600",
     // SVG path 데이터 (체크 원형 아이콘)
     iconPath: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
   },
   error: {
-    container: "bg-red-50 border-red-400 text-red-800",
+    // 흰 배경 + 좌측 테슬라 레드 라인 — 시안의 포인트 컬러와 동일
+    container: "bg-white border-l-4 border-l-red-500 border-t-0 border-r-0 border-b-0",
     icon: "text-red-500",
     // SVG path 데이터 (X 원형 아이콘)
     iconPath:
       "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z",
   },
   warning: {
-    container: "bg-amber-50 border-amber-400 text-amber-800",
-    icon: "text-amber-500",
+    // 흰 배경 + 좌측 주황 라인 (경고)
+    container: "bg-white border-l-4 border-l-yellow-500 border-t-0 border-r-0 border-b-0",
+    icon: "text-yellow-500",
     // SVG path 데이터 (삼각형 경고 아이콘)
     iconPath:
       "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z",
   },
   info: {
-    container: "bg-blue-50 border-blue-400 text-blue-800",
+    // 흰 배경 + 좌측 회색 라인 (안내)
+    container: "bg-white border-l-4 border-l-blue-500 border-t-0 border-r-0 border-b-0",
     icon: "text-blue-500",
     // SVG path 데이터 (i 원형 아이콘)
     iconPath: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
@@ -106,19 +111,21 @@ const positionStyles: Record<ToastPosition, string> = {
 };
 
 // 모든 variant에 공통으로 적용되는 뼈대 스타일
-// - fixed      : 스크롤에 영향 없이 화면에 고정
-// - z-50       : 다른 요소들 위에 떠 있도록 z-index 설정
-// - flex / gap : 아이콘 + 텍스트 + 닫기버튼 가로 배치
-// - transition : isVisible 변경 시 부드러운 애니메이션
+// - fixed        : 스크롤에 영향 없이 화면에 고정
+// - z-50         : 다른 요소들 위에 떠 있도록 z-index 설정
+// - flex / gap   : 아이콘 + 텍스트 + 닫기버튼 가로 배치
+// - shadow-md    : 시안의 카드 느낌과 통일감 있게 그림자 적용
+// - rounded-none : 시안의 각진 스타일에 맞게 둥글기 제거
+// - transition   : isVisible 변경 시 부드러운 애니메이션
 const baseStyle =
-  "fixed z-50 flex items-start gap-3 px-4 py-3 rounded-xl border shadow-lg min-w-[280px] max-w-sm transition-all duration-300";
+  "fixed z-50 flex items-center gap-3 px-5 py-4 rounded-none shadow-md min-w-[280px] max-w-sm transition-all duration-300 border";
 
 // ─────────────────────────────────────────────
 // 컴포넌트
 // ─────────────────────────────────────────────
 
 export const Toast = ({
-  variant = "info",        // 기본값: info (파란색)
+  variant = "info",        // 기본값: info
   position = "top-right",  // 기본값: 우상단
   isVisible = true,        // 기본값: 보임
   hasCloseButton = true,   // 기본값: 닫기버튼 있음
@@ -135,7 +142,7 @@ export const Toast = ({
 
   // 최종 className 조합
   // 1) baseStyle      : 공통 뼈대
-  // 2) container      : variant별 색상
+  // 2) container      : variant별 색상 + 좌측 라인
   // 3) positionStyles : position별 위치
   // 4) 애니메이션     : isVisible이 true면 보임, false면 위로 사라짐
   // 5) className      : 외부에서 추가로 전달한 클래스 (확장 가능)
@@ -160,7 +167,7 @@ export const Toast = ({
       {/* 아이콘 영역 */}
       {/* aria-hidden="true": 아이콘은 장식용이라 스크린리더가 읽지 않도록 숨김 */}
       <svg
-        className={`w-5 h-5 shrink-0 mt-0.5 ${icon}`}
+        className={`w-5 h-5 shrink-0 ${icon}`}
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -178,7 +185,7 @@ export const Toast = ({
       {/* 메시지 영역 */}
       {/* children으로 구멍을 뚫어뒀기 때문에 */}
       {/* 문자열이든 JSX든 자유롭게 넣을 수 있음 */}
-      <div className="flex-1 text-sm font-medium leading-snug">
+      <div className="flex-1 text-sm font-medium tracking-wide text-gray-700">
         {children}
       </div>
 
@@ -188,7 +195,7 @@ export const Toast = ({
         <button
           onClick={onClose}
           aria-label="닫기" // 스크린리더용 버튼 설명
-          className="shrink-0 opacity-50 hover:opacity-100 transition-opacity"
+          className="shrink-0 text-gray-300 hover:text-gray-500 transition-colors"
         >
           <svg
             className="w-4 h-4"
