@@ -6,11 +6,9 @@
   <component name="ChangeListManager">
     <list default="true" id="bef6268d-ebfe-4e7f-bfe9-4b23e66d89e4" name="변경" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/controller/.gitkeep" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/entity/Reservation.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/entity/Reservation.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/repository/ReservationRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/repository/ReservationRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/service/ReservationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/service/ReservationService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../frontend/chargerReservation/src/layout/basic/.gitkeep" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../frontend/chargerReservation/src/services/.gitkeep" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../frontend/chargerReservation/src/types/.gitkeep" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -41,30 +39,31 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Gradle.ReservationServiceTest.createReservation_Fail_MaxLimit.executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.ReservationServiceTest.createReservation_Fail_TimeOverlap.executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.ReservationServiceTest.executor&quot;: &quot;Run&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrary&quot;: &quot;JUnit5&quot;,
-    &quot;com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrarySuperClass.JUnit5&quot;: &quot;&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;dev-sjw&quot;,
-    &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Work/90_TeamProject/backend/chargerReservation&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;settings.javascript.runtime&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Gradle.ReservationServiceTest.createReservation_Fail_MaxLimit.executor": "Run",
+    "Gradle.ReservationServiceTest.createReservation_Fail_TimeOverlap.executor": "Run",
+    "Gradle.ReservationServiceTest.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrary": "JUnit5",
+    "com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrarySuperClass.JUnit5": "",
+    "git-widget-placeholder": "dev-sjw",
+    "javascript.preferred.runtime.type.id": "node",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Work/90_TeamProject/backend/chargerReservation",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "settings.javascript.runtime",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Work\90_TeamProject\backend\chargerReservation\src\main\java\com\simplecoding\chargerreservation\admin" />
@@ -197,6 +196,7 @@
       <workItem from="1774228418007" duration="28000" />
       <workItem from="1774321883856" duration="3929000" />
       <workItem from="1774396455731" duration="16410000" />
+      <workItem from="1774917500854" duration="1784000" />
     </task>
     <servers />
   </component>
