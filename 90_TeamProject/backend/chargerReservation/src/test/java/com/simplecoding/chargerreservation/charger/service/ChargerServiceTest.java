@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.Rollback;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -25,6 +26,9 @@ class ChargerServiceTest {
 
     @Autowired
     private ChargerRepository chargerRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     @Rollback(false) // 테스트 후 데이터를 남기고 싶으면 false, 지우고 싶으면 true
@@ -51,4 +55,15 @@ class ChargerServiceTest {
         log.info("========= [테스트 종료] 모든 검증 통과 =========");
     }
 
+    @Test
+    @DisplayName("실제 API 호출 및 DB 반영 확인 테스트 (롤백 없음)")
+    void updateRecentChargerStatusTest() {
+        log.info(">>>>>> [테스트 시작] 최근 10분간 변동된 모든 데이터 수집");
+
+        // 1. 서비스 호출
+        // 이제 내부 while문에 의해 5,000건이 넘어도 모든 페이지를 다 가져옵니다.
+        chargerService.updateRecentChargerStatus();
+
+        log.info(">>>>>> [테스트 종료] 콘솔 로그에서 '총 OO건 동기화 완료' 문구를 확인하세요.");
+    }
 }

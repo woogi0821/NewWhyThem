@@ -46,14 +46,4 @@ public class StationController {
         return ResponseEntity.ok(detail);
     }
 
-    /**
-     * 3. 공공 데이터 수집 실행 (관리자용)
-     * POST /api/stations/collect
-     */
-    @PostMapping("/collect")
-    public ResponseEntity<String> collectData() {
-        log.info("🚀 공공 데이터 수집 시작...");
-        stationService.collectAllStationData();
-        return ResponseEntity.ok("데이터 수집 및 업데이트가 완료되었습니다.");
-    }
 }

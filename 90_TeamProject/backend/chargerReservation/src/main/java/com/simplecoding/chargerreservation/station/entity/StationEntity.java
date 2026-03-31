@@ -71,28 +71,28 @@ public class StationEntity {
 
     // --- JPA Lifecycle Events ---
 
-    /**
-     * 데이터가 처음 Insert 되기 직전에 실행됩니다.
-     * 기본값 설정 및 생성/수정 시간을 초기화합니다.
-     */
-    @PrePersist
-    public void prePersist() {
-        if (this.createdAt == null) {
-            this.createdAt = LocalDateTime.now();
-        }
-        this.updatedAt = LocalDateTime.now();
-
-        // DB 기본값(N)과 자바 객체의 일관성을 맞춥니다.
-        if (this.parkingFree == null) this.parkingFree = "N";
-        if (this.limitYn == null) this.limitYn = "N";
-    }
-
-    /**
-     * 데이터가 Update 되기 직전에 실행됩니다.
-     * 수정 시간을 현재 시간으로 갱신합니다.
-     */
-    @PreUpdate
-    public void preUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
+//    /**
+//     * 데이터가 처음 Insert 되기 직전에 실행됩니다.
+//     * 기본값 설정 및 생성/수정 시간을 초기화합니다.
+//     */
+//    @PrePersist
+//    public void prePersist() {
+//        if (this.createdAt == null) {
+//            this.createdAt = LocalDateTime.now();
+//        }
+//        this.updatedAt = LocalDateTime.now();
+//
+//        // DB 기본값(N)과 자바 객체의 일관성을 맞춥니다.
+//        if (this.parkingFree == null) this.parkingFree = "N";
+//        if (this.limitYn == null) this.limitYn = "N";
+//    }
+//
+//    /**
+//     * 데이터가 Update 되기 직전에 실행됩니다.
+//     * 수정 시간을 현재 시간으로 갱신합니다.
+//     */
+//    @PreUpdate
+//    public void preUpdate() {
+//        this.updatedAt = LocalDateTime.now();
+//    }
 }

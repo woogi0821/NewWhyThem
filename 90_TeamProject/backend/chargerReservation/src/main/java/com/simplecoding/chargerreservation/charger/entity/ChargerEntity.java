@@ -40,15 +40,26 @@ public class ChargerEntity {
     @Column(name = "METHOD", length = 100)
     private String method;
 
+    // --- 새로 추가된 컬럼 시작 ---
+
+    @Column(name = "LAST_TSDT", length = 14)
+    private String lastTsdt; // 마지막 충전 시작일시
+
+    @Column(name = "LAST_TEDT", length = 14)
+    private String lastTedt; // 마지막 충전 종료일시
+
+    @Column(name = "NOW_TSDT", length = 14)
+    private String nowTsdt;  // 현재 충전 시작일시
+
+    // --- 새로 추가된 컬럼 끝 ---
+
     @Column(name = "CREATED_AT", updatable = false, insertable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "UPDATED_AT")
     private LocalDateTime updatedAt;
 
-    // 상세 정보 조회 및 Station 정보 참조를 위한 연관 관계 설정
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "STAT_ID", insertable = false, updatable = false)
     private StationEntity station;
-
 }

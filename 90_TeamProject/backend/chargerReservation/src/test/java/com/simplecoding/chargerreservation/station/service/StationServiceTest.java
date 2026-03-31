@@ -82,10 +82,4 @@ class StationServiceTest {
         }
     }
 
-    @Test
-    void 수집_테스트() {
-        System.out.println("====== 테스트 시작 ======");
-        stationService.collectAllStationData();
-        System.out.println("====== 테스트 종료 ======");
-    }
 }
