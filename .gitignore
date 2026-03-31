@@ -137,3 +137,60 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# ==========================================
+# Backend (Spring Boot / Java / JPA) 
+# ==========================================
+
+# Compiled class files
+*.class
+
+# Package Files (빌드 결과물)
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# virtual machine crash logs
+hs_err_pid*
+replay_pid*
+
+# ==========================================
+# Build Tools (Gradle / Maven)
+# ==========================================
+.gradle/
+build/
+target/
+out/
+!gradle/wrapper/gradle-wrapper.jar
+
+# ==========================================
+# IDE (IntelliJ IDEA & Eclipse)
+# ==========================================
+# 팀원들 각자의 에디터 설정이 깃허브에 올라가는 것을 막습니다.
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# 혹시 이클립스나 VSCode로 백엔드 켜는 팀원을 위한 방어막
+.project
+.classpath
+.settings/
+.factorypath
+.springBeans
+.sts4-cache/
+
+# ==========================================
+# OS Generated Files (맥/윈도우 찌꺼기 파일)
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
