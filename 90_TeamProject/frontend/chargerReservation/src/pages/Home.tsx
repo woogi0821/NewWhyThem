@@ -12,7 +12,7 @@ export function Home() {
       {/* 모달 호출 */}
       <Modal 
         isOpen={show} 
-        onClose={() => setShow(false)} 
+        onClose={() => setShow(true)} 
         title="알림창 테스트"
       >
         <p>모달 테스트</p>
