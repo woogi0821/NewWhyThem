@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface StationRepository extends JpaRepository<StationEntity, String> {
 
     /**
-     * 하버사인(Haversine) 공식을 이용한 반경 검색 (오라클 SQL 전용)
+     * 1. 하버사인(Haversine) 공식을 이용한 반경 검색 (기존 유지)
      */
     @Query(value = "SELECT * FROM ( " +
             "    SELECT s.*, " +
@@ -30,23 +30,29 @@ public interface StationRepository extends JpaRepository<StationEntity, String> 
             @Param("lng") Double lng,
             @Param("radius") Double radius);
 
-    // --- 스케줄러 및 데이터 관리를 위해 추가 추천하는 메서드 ---
+    /**
+     * 2. 통합 키워드 검색 (충전소명 OR 주소 OR 운영기관명)
+     * 사용자가 검색창에 입력한 단어로 세 가지 컬럼을 동시에 뒤집니다.
+     */
+    @Query("SELECT s FROM StationEntity s " +
+            "WHERE s.statNm LIKE %:keyword% " +
+            "OR s.addr LIKE %:keyword% " +
+            "OR s.bnm LIKE %:keyword% " +
+            "ORDER BY s.statNm ASC")
+    List<StationEntity> findByIntegratedSearch(@Param("keyword") String keyword);
 
     /**
-     * 특정 충전소 ID로 데이터가 존재하는지 확인 (Optional 반환)
-     * 스케줄러에서 '기존 데이터 수정' vs '신규 등록' 판단 시 사용합니다.
+     * 3. 특정 충전소 ID로 데이터 조회 (기존 유지)
      */
     Optional<StationEntity> findByStatId(String statId);
 
     /**
-     * 특정 지역 코드(zcode)에 해당하는 충전소 목록 조회
-     * 나중에 지역별로 나누어 업데이트하거나 필터링할 때 유용합니다.
+     * 4. 특정 지역 코드(zcode)로 조회 (기존 유지)
      */
     List<StationEntity> findByZcode(String zcode);
 
     /**
-     * 운영기관명(bnm)으로 충전소 검색
-     * 특정 브랜드(예: 환경부)의 요금 일괄 변경 등을 처리할 때 활용 가능합니다.
+     * 5. 운영기관명(bnm) 단독 검색 (기존 유지)
      */
     List<StationEntity> findByBnmContaining(String bnm);
 }

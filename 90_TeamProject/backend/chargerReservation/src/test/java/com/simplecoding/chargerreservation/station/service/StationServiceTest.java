@@ -2,6 +2,7 @@ package com.simplecoding.chargerreservation.station.service;
 
 import com.simplecoding.chargerreservation.charger.dto.MarkerDto;
 import com.simplecoding.chargerreservation.station.dto.StationDto;
+import lombok.extern.log4j.Log4j2;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
+@Log4j2
 @SpringBootTest
 class StationServiceTest {
 
@@ -82,4 +83,46 @@ class StationServiceTest {
         }
     }
 
+    @Test
+    @DisplayName("충전소 통합 검색 테스트 (이름/주소/운영사)")
+    void searchStations() {
+        // 1. Given (준비)
+        // DB에 "강남" 또는 "환경공단" 등이 포함된 데이터가 있다고 가정
+        String keyword = "환경부";
+
+        // 2. When (실행)
+        List<StationDto> results = stationService.searchStations(keyword);
+
+        // 3. Then (검증)
+        // 결과가 null이 아니어야 함
+        assertThat(results).isNotNull();
+
+        // 검색 결과가 있다면, 각 항목에 키워드가 포함되어 있는지 확인
+        if (!results.isEmpty()) {
+            log.info("▶ 검색 결과 개수: {}건", results.size());
+            results.forEach(dto -> {
+                boolean match = dto.getStatNm().contains(keyword) ||
+                        dto.getAddr().contains(keyword) ||
+                        dto.getBnm().contains(keyword);
+
+                assertThat(match).isTrue();
+                log.info("✔ 검색 일치 확인: {}", dto.getStatNm());
+            });
+        } else {
+            log.warn("⚠ DB에 '{}' 키워드가 포함된 데이터가 없습니다. 수집을 먼저 진행하세요.", keyword);
+        }
+    }
+
+    @Test
+    @DisplayName("빈 키워드 검색 시 빈 리스트 반환 테스트")
+    void searchStationsEmpty() {
+        // Given
+        String keyword = "   "; // 공백 검색
+
+        // When
+        List<StationDto> results = stationService.searchStations(keyword);
+
+        // Then
+        assertThat(results).isEmpty();
+    }
 }

@@ -46,4 +46,21 @@ public class StationController {
         return ResponseEntity.ok(detail);
     }
 
+    /**
+     * [API] 충전소 통합 검색 (이름, 주소, 운영사 키워드)
+     * GET /api/station/search?keyword=강남
+     */
+    @GetMapping("/search")
+    public ResponseEntity<List<StationDto>> searchStations(@RequestParam(value = "keyword", required = false) String keyword) {
+        log.info("▶ [API 호출] 충전소 검색 - 키워드: [{}]", keyword);
+
+        // 서비스 호출
+        List<StationDto> results = stationService.searchStations(keyword);
+
+        log.info("◀ [API 응답] 검색 완료 - 결과: {}건", results.size());
+
+        // 200 OK 상태코드와 함께 결과 반환
+        return ResponseEntity.ok(results);
+    }
+
 }

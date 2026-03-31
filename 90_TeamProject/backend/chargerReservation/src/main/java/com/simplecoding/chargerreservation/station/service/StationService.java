@@ -80,6 +80,23 @@ public class StationService {
                 .build();
     }
 
+
+    @Transactional(readOnly = true)
+    public List<StationDto> searchStations(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return List.of();
+        }
+
+        // 1. Repository에서 엔티티 리스트 조회
+        List<StationEntity> entities = stationRepository.findByIntegratedSearch(keyword.trim());
+
+        // 2. DTO에 이미 있는 [fromEntity] 메서드 사용!
+        return entities.stream()
+                .map(StationDto::fromEntity) // ◀ StationDto에 있는 메서드 이름으로 호출
+                .collect(Collectors.toList());
+    }
+
+
     // ==========================================
     // 2. 수집 로직 (JdbcTemplate & Merge 활용)
     // ==========================================
@@ -218,4 +235,13 @@ public class StationService {
             public int getBatchSize() { return list.size(); }
         });
     }
+
+
 }
+
+// StationService 클래스 내부 어디든 상관없지만, 보통 맨 아래에 둡니다.
+
+/**
+ * [도움 메서드] Entity 객체를 DTO 객체로 변환합니다.
+ * 이 메서드가 있어야 searchStations와 getStationDetail의 빨간 줄이 사라집니다.
+ */
