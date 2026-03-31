@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChargeNow - 전기차 충전소 예약 시스템</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar" id="navbar">
+  <div class="nav-inner">
+    <div class="logo" onclick="navigateTo('home')">
+      <span class="logo-bolt">⚡</span>
+      <span class="logo-text">ChargeNow</span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#" class="nav-link active" data-page="home">홈</a></li>
+      <li><a href="#" class="nav-link" data-page="stations">충전소 찾기</a></li>
+      <li><a href="#" class="nav-link" data-page="support">고객센터</a></li>
+      <li class="nav-auth-item" style="display:none"><a href="#" class="nav-link" data-page="reservations">내 예약 <span class="nav-badge">2</span></a></li>
+      <li class="nav-auth-item" style="display:none"><a href="#" class="nav-link" data-page="mypage">마이페이지</a></li>
+    </ul>
+    <div class="nav-actions">
+      <div class="notif-wrap nav-auth-item" style="display:none">
+        <button class="btn-notification" id="notifBtn" onclick="toggleNotifPanel()" title="알림">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="notif-dot" id="notifDot"></span>
+        </button>
+        <div class="notif-panel" id="notifPanel">
+          <div class="notif-panel-header">
+            <span class="notif-panel-title">알림</span>
+            <button class="notif-all-read" onclick="markAllRead()">모두 읽음</button>
+          </div>
+          <ul class="notif-list">
+            <li class="notif-item unread">
+              <div class="notif-icon n-charge">⚡</div>
+              <div class="notif-body"><p class="notif-msg">서초 반포점 충전이 완료되었습니다</p><span class="notif-time">방금 전</span></div>
+              <span class="notif-unread-dot"></span>
+            </li>
+            <li class="notif-item unread">
+              <div class="notif-icon n-reserve">📅</div>
+              <div class="notif-body"><p class="notif-msg">강남 테헤란로점 예약 15분 전입니다</p><span class="notif-time">15분 전</span></div>
+              <span class="notif-unread-dot"></span>
+            </li>
+            <li class="notif-item">
+              <div class="notif-icon n-done">✓</div>
+              <div class="notif-body"><p class="notif-msg">송파 잠실점 예약이 확정되었습니다</p><span class="notif-time">어제</span></div>
+            </li>
+            <li class="notif-item">
+              <div class="notif-icon n-done">✓</div>
+              <div class="notif-body"><p class="notif-msg">마포 홍대점 충전이 완료되었습니다</p><span class="notif-time">2일 전</span></div>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <button class="btn-login" id="loginBtn">로그인</button>
+      <button class="hamburger" id="hamburger" aria-label="메뉴"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</nav>
+
+<!-- ===== 로그인 안내 상단 배너 ===== -->
+<div class="login-banner" id="loginBanner">
+  <div class="login-banner-inner">
+    <span class="login-banner-icon">🔐</span>
+    <span class="login-banner-msg">예약하려면 <strong>로그인</strong>이 필요해요</span>
+    <button class="login-banner-btn" onclick="closeBanner(); openLoginModal()">로그인하기</button>
+    <button class="login-banner-close" onclick="closeBanner()">✕</button>
+  </div>
+</div>
+
+<!-- ===== SIDEBAR ===== -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo"><span class="logo-bolt">⚡</span><span class="logo-text">ChargeNow</span></div>
+    <button class="sidebar-close" onclick="closeSidebar()">✕</button>
+  </div>
+
+  <!-- 로그인 전: 로그인 유도 카드 -->
+  <div class="sidebar-login-card" id="sidebarLoginCard">
+    <p class="sidebar-login-desc">로그인하고 충전소를<br>예약해보세요</p>
+    <button class="sidebar-login-card-btn" onclick="closeSidebar(); openLoginModal()">로그인 / 회원가입</button>
+  </div>
+
+  <!-- 로그인 후: 프로필 미니 -->
+  <div class="sidebar-profile-card" id="sidebarProfileCard" style="display:none">
+    <div class="sidebar-profile-avatar">🧑</div>
+    <div class="sidebar-profile-info">
+      <strong id="sidebarUserName">홍길동</strong>
+      <span id="sidebarUserEmail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0e666160694e6b766f637e626b206d6163">[email&#160;protected]</a></span>
+    </div>
+  </div>
+
+  <div class="sidebar-divider"></div>
+
+  <ul class="sidebar-links">
+    <li><a href="#" class="sidebar-link" data-page="home" onclick="sidebarNav(this)">🏠 홈</a></li>
+    <li><a href="#" class="sidebar-link" data-page="stations" onclick="sidebarNav(this)">🗺️ 충전소 찾기</a></li>
+    <li><a href="#" class="sidebar-link" data-page="support" onclick="sidebarNav(this)">💬 고객센터</a></li>
+    <li class="sidebar-auth-item" style="display:none"><a href="#" class="sidebar-link" data-page="reservations" onclick="sidebarNav(this)">📅 내 예약</a></li>
+    <li class="sidebar-auth-item" style="display:none"><a href="#" class="sidebar-link" data-page="mypage" onclick="sidebarNav(this)">👤 마이페이지</a></li>
+  </ul>
+
+  <!-- 로그인 후: 로그아웃 버튼 (메뉴 바로 아래) -->
+  <div class="sidebar-logout-wrap sidebar-auth-item" style="display:none">
+    <button class="sidebar-logout-btn" id="sidebarLoginBtn" onclick="toggleLoginFromSidebar()">로그아웃</button>
+  </div>
+</aside>
+
+<!-- ===== 로그인 MODAL ===== -->
+<div class="login-overlay" id="loginOverlay" onclick="closeLoginModal()">
+  <div class="login-modal" onclick="event.stopPropagation()">
+    <button class="login-modal-close" onclick="closeLoginModal()">✕</button>
+
+    <!-- 로그인 폼 -->
+    <div id="loginForm">
+      <div class="login-brand">
+        <span class="logo-bolt" style="font-size:2rem">⚡</span>
+        <span class="logo-text" style="font-size:1.4rem">ChargeNow</span>
+      </div>
+      <h2 class="login-title">로그인</h2>
+      <p class="login-sub">서비스 이용을 위해 로그인해주세요</p>
+      <div class="login-field">
+        <label>아이디 (이메일)</label>
+        <input type="email" id="loginEmail" placeholder="example@email.com" onkeydown="if(event.key==='Enter')submitLogin()">
+      </div>
+      <div class="login-field">
+        <label>비밀번호</label>
+        <input type="password" id="loginPw" placeholder="비밀번호를 입력하세요" onkeydown="if(event.key==='Enter')submitLogin()">
+        <p class="login-error" id="loginError">아이디 또는 비밀번호가 올바르지 않습니다</p>
+      </div>
+      <button class="login-submit-btn" onclick="submitLogin()">로그인</button>
+      <div class="login-divider"><span>또는 간편 로그인</span></div>
+      <div class="login-social">
+        <button class="social-btn kakao" onclick="socialLogin('카카오')">
+          <span class="social-logo kakao-logo" style="width:26px;height:26px;border-radius:50%;background:#3C1E1E;display:flex;align-items:center;justify-content:center;padding:5px;flex-shrink:0;">
+            <svg width="14" height="14" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 0C4.029 0 0 3.168 0 7.08c0 2.508 1.674 4.716 4.194 6.012L3.15 17.1a.27.27 0 0 0 .396.306l4.878-3.24A10.8 10.8 0 0 0 9 14.16c4.971 0 9-3.168 9-7.08S13.971 0 9 0Z" fill="#FEE500"/></svg>
+          </span>
+          카카오로 로그인
+        </button>
+        <button class="social-btn naver" onclick="socialLogin('네이버')">
+          <span class="social-logo naver-logo">
+            <svg width="14" height="14" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.194 9.108L7.596 0H0v18h7.806V8.892L10.404 18H18V0h-7.806z" fill="white"/></svg>
+          </span>
+          네이버로 로그인
+        </button>
+      </div>
+      <p class="login-switch">계정이 없으신가요? <a href="#" onclick="showSignup(event)">회원가입</a></p>
+    </div>
+
+    <!-- 약관 상세 보기 레이어 -->
+    <div id="termsDetailLayer" style="display:none;position:absolute;inset:0;background:#fff;border-radius:inherit;z-index:10;display:none;flex-direction:column;">
+      <div style="display:flex;align-items:center;gap:10px;padding:18px 20px 14px;border-bottom:1.5px solid var(--border);">
+        <button onclick="closeTermsDetail()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-sub);padding:2px 6px;border-radius:6px;line-height:1;">←</button>
+        <strong id="termsDetailTitle" style="font-size:1rem;color:var(--text);flex:1"></strong>
+      </div>
+      <div id="termsDetailBody" style="flex:1;overflow-y:auto;padding:18px 20px;font-size:0.83rem;line-height:1.8;color:var(--text-sub);"></div>
+      <div style="padding:14px 20px;border-top:1.5px solid var(--border);">
+        <button onclick="closeTermsDetail()" style="width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-size:0.92rem;font-weight:700;cursor:pointer;">확인</button>
+      </div>
+    </div>
+
+    <!-- 약관 동의 폼 -->
+    <div id="termsForm" style="display:none">
+      <div class="login-brand">
+        <span class="logo-bolt" style="font-size:2rem">⚡</span>
+        <span class="logo-text" style="font-size:1.4rem">ChargeNow</span>
+      </div>
+      <h2 class="login-title">약관 동의</h2>
+      <p class="login-sub">서비스 이용을 위해 약관에 동의해주세요</p>
+
+      <div class="terms-box">
+        <!-- 전체 동의 -->
+        <div class="terms-all-row" onclick="toggleAllTerms()">
+          <div class="terms-check-circle" id="checkAll">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><polyline points="2,6.5 5.2,9.5 11,3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="terms-all-label">
+            <strong>전체 동의하기</strong>
+            <span>필수 및 선택 약관에 모두 동의합니다</span>
+          </div>
+        </div>
+
+        <div class="terms-divider"></div>
+
+        <!-- 필수: 이용약관 -->
+        <div class="terms-row">
+          <div class="terms-check-circle small" id="check1" onclick="toggleTerm('check1')">
+            <svg width="11" height="11" viewBox="0 0 13 13" fill="none"><polyline points="2,6.5 5.2,9.5 11,3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span class="terms-label"><em class="terms-tag required">필수</em> ChargeNow 이용약관</span>
+          <a href="#" class="terms-view-link" onclick="showTermsDetail(event,'이용약관')">보기</a>
+        </div>
+
+        <!-- 필수: 개인정보 수집·이용 -->
+        <div class="terms-row">
+          <div class="terms-check-circle small" id="check2" onclick="toggleTerm('check2')">
+            <svg width="11" height="11" viewBox="0 0 13 13" fill="none"><polyline points="2,6.5 5.2,9.5 11,3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span class="terms-label"><em class="terms-tag required">필수</em> 개인정보 수집 및 이용 동의</span>
+          <a href="#" class="terms-view-link" onclick="showTermsDetail(event,'개인정보 수집 및 이용')">보기</a>
+        </div>
+
+        <!-- 선택: 위치기반 서비스 -->
+        <div class="terms-row">
+          <div class="terms-check-circle small" id="check3" onclick="toggleTerm('check3')">
+            <svg width="11" height="11" viewBox="0 0 13 13" fill="none"><polyline points="2,6.5 5.2,9.5 11,3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span class="terms-label"><em class="terms-tag optional">선택</em> 위치기반 서비스 이용약관</span>
+          <a href="#" class="terms-view-link" onclick="showTermsDetail(event,'위치기반 서비스')">보기</a>
+        </div>
+
+        <!-- 선택: 마케팅 수신 -->
+        <div class="terms-row">
+          <div class="terms-check-circle small" id="check4" onclick="toggleTerm('check4')">
+            <svg width="11" height="11" viewBox="0 0 13 13" fill="none"><polyline points="2,6.5 5.2,9.5 11,3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span class="terms-label"><em class="terms-tag optional">선택</em> 이벤트·혜택 정보 수신 동의</span>
+        </div>
+      </div>
+
+      <button class="login-submit-btn" id="termsNextBtn" onclick="proceedToSignup()" disabled style="opacity:0.45;cursor:not-allowed">다음</button>
+      <p class="login-switch">이미 계정이 있으신가요? <a href="#" onclick="showLogin(event)">로그인</a></p>
+    </div>
+
+    <!-- 회원가입 폼 -->
+    <div id="signupForm" style="display:none">
+      <div class="login-brand">
+        <span class="logo-bolt" style="font-size:2rem">⚡</span>
+        <span class="logo-text" style="font-size:1.4rem">ChargeNow</span>
+      </div>
+      <h2 class="login-title">회원가입</h2>
+      <p class="login-sub">ChargeNow와 함께 스마트한 충전을 시작하세요</p>
+      <div class="login-field">
+        <label>이름</label>
+        <input type="text" id="signupName" placeholder="홍길동">
+      </div>
+      <div class="login-field">
+        <label>이메일</label>
+        <input type="email" id="signupEmail" placeholder="example@email.com">
+      </div>
+      <div class="login-field">
+        <label>비밀번호</label>
+        <input type="password" id="signupPw" placeholder="8자 이상 입력하세요" oninput="checkPwMatch()">
+      </div>
+      <div class="login-field">
+        <label>비밀번호 확인</label>
+        <input type="password" id="signupPwConfirm" placeholder="비밀번호를 다시 입력하세요" oninput="checkPwMatch()">
+        <p class="pw-match-msg" id="pwMatchMsg"></p>
+      </div>
+      <button class="login-submit-btn" onclick="submitSignup()">가입하기</button>
+      <p class="login-switch">이미 계정이 있으신가요? <a href="#" onclick="showLogin(event)">로그인</a></p>
+    </div>
+  </div>
+</div>
+
+<main id="app">
+
+  <!-- ========== HOME ========== -->
+  <div class="page active" id="page-home">
+    <section class="hero">
+      <div class="hero-bg">
+        <div class="hero-blob blob1"></div>
+        <div class="hero-blob blob2"></div>
+        <div class="hero-blob blob3"></div>
+      </div>
+      <div class="hero-content">
+        <div class="hero-badge"><span class="badge-dot"></span>실시간 · 248개 충전소 운영 중</div>
+        <h1 class="hero-title">가까운 충전소를<br><span class="highlight">지금 바로</span> 예약하세요</h1>
+        <p class="hero-sub">실시간 충전소 현황 확인부터 간편 예약까지,<br>ChargeNow 하나로 모든 것을 해결하세요.</p>
+        <div class="hero-search">
+          <div class="search-box">
+            <span class="search-icon">📍</span>
+            <input type="text" placeholder="지역, 충전소명 검색..." id="heroSearch" onkeydown="if(event.key==='Enter') goToStations()">
+            <button class="search-btn" onclick="goToStations()">검색</button>
+          </div>
+          <div class="search-tags">
+            <span onclick="quickSearch('강남')">강남</span>
+            <span onclick="quickSearch('서초')">서초</span>
+            <span onclick="quickSearch('급속')">급속 충전</span>
+            <span onclick="quickSearch('24시간')">24시간</span>
+          </div>
+        </div>
+        <div class="hero-stats">
+          <div class="stat"><span class="stat-num" data-target="248">0</span><span class="stat-label">충전소</span></div>
+          <div class="stat-divider"></div>
+          <div class="stat"><span class="stat-num" data-target="1204">0</span><span class="stat-label">충전기</span></div>
+          <div class="stat-divider"></div>
+          <div class="stat"><span class="stat-num" data-target="98">0</span><span class="stat-label">가동률 %</span></div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="ev-card ev-card-map">
+          <div class="ev-card-header">
+            <span>내 주변 충전소</span>
+            <span class="live-badge"><span class="live-dot"></span>LIVE</span>
+          </div>
+          <!-- 미니 카카오맵 -->
+          <div class="hero-mini-map-wrap">
+            <div id="heroMiniMap" class="hero-mini-map"></div>
+            <!-- 로딩 상태 -->
+            <div id="heroMiniMapLoading" class="hero-mini-map-loading">
+              <div class="hero-mini-map-spinner"></div>
+              <span>지도 불러오는 중...</span>
+            </div>
+          </div>
+          <button class="ev-card-btn" onclick="navigateTo('stations')">전체 충전소 보기 →</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="features">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">왜 ChargeNow인가요?</span>
+          <h2>더 스마트한 충전 경험</h2>
+          <p>번거로운 충전을 간편하게, ChargeNow가 함께합니다</p>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card"><div class="feature-icon-wrap" style="background:#EEF4FF"><span>🗺️</span></div><h3>실시간 지도</h3><p>주변 충전소의 현재 이용 현황을 지도에서 한눈에 확인하세요</p></div>
+          <div class="feature-card accent"><div class="feature-icon-wrap" style="background:rgba(255,255,255,0.25)"><span>⚡</span></div><h3>즉시 예약</h3><p>원하는 시간과 충전기를 선택해 빠르게 예약을 완료하세요</p></div>
+          <div class="feature-card"><div class="feature-icon-wrap" style="background:#FEF9E7"><span>🔔</span></div><h3>스마트 알림</h3><p>충전 완료, 예약 시간 임박 등 중요한 알림을 실시간으로 받으세요</p></div>
+          <div class="feature-card"><div class="feature-icon-wrap" style="background:#EEF4FF"><span>📊</span></div><h3>충전 이력 관리</h3><p>내 충전 이력과 비용, CO₂ 절감량을 한눈에 확인하고 관리하세요</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== HOW TO RESERVE ========== -->
+    <section class="how-to">
+      <div class="container">
+        <div class="how-to-header">
+          <h2>3단계로 끝나는<br>간단한 예약</h2>
+        </div>
+        <div class="how-to-grid">
+          <div class="how-to-card">
+            <div class="how-to-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <div class="how-to-step">STEP 01</div>
+            <h3>충전소 검색</h3>
+            <p>현재 위치 또는 목적지 근처 충전소를 지도에서 실시간으로 확인하세요. 여유 자리와 충전 속도를 한눈에 볼 수 있어요.</p>
+          </div>
+          <div class="how-to-card">
+            <div class="how-to-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <div class="how-to-step">STEP 02</div>
+            <h3>시간 예약</h3>
+            <p>원하는 날짜와 시간대를 선택해 자리를 미리 확보하세요. 예약 확인은 문자와 앱 알림으로 즉시 받을 수 있어요.</p>
+          </div>
+          <div class="how-to-card">
+            <div class="how-to-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div class="how-to-step">STEP 03</div>
+            <h3>바로 충전</h3>
+            <p>예약 시간에 도착해 QR코드 또는 앱으로 인증하면 즉시 충전 시작. 대기줄 없이 바로 시작할 수 있어요.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="live-status">
+      <div class="container">
+        <div class="ls-header">
+          <div><h2>현재 충전소 현황</h2><p class="ls-updated">방금 전 업데이트됨</p></div>
+          <button class="btn-goto-stations" onclick="navigateTo('stations')">전체 보기 →</button>
+        </div>
+        <div class="status-cards">
+          <div class="status-card s-blue">
+            <div class="sc-top"><div class="sc-icon-wrap blue-ic">✅</div><span class="sc-trend up">+3%</span></div>
+            <div class="sc-num">186</div><div class="sc-label">이용 가능</div>
+            <div class="sc-bar"><div class="sc-bar-fill" style="width:75%;background:var(--primary)"></div></div>
+          </div>
+          <div class="status-card s-orange">
+            <div class="sc-top"><div class="sc-icon-wrap orange">⚡</div><span class="sc-trend neutral">±0</span></div>
+            <div class="sc-num">42</div><div class="sc-label">충전 중</div>
+            <div class="sc-bar"><div class="sc-bar-fill" style="width:17%;background:var(--orange)"></div></div>
+          </div>
+          <div class="status-card s-red">
+            <div class="sc-top"><div class="sc-icon-wrap red">🚫</div><span class="sc-trend down">-1%</span></div>
+            <div class="sc-num">12</div><div class="sc-label">이용 불가</div>
+            <div class="sc-bar"><div class="sc-bar-fill" style="width:5%;background:var(--red)"></div></div>
+          </div>
+          <div class="status-card s-sky">
+            <div class="sc-top"><div class="sc-icon-wrap sky-ic">📅</div><span class="sc-trend up">+2</span></div>
+            <div class="sc-num">8</div><div class="sc-label">예약 중</div>
+            <div class="sc-bar"><div class="sc-bar-fill" style="width:3%;background:var(--primary-dark)"></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-inner">
+          <div class="footer-brand">
+            <div class="logo"><span class="logo-bolt">⚡</span><span class="logo-text">ChargeNow</span></div>
+            <p>친환경 모빌리티를 위한<br>스마트 충전소 예약 플랫폼</p>
+          </div>
+          <div class="footer-links">
+            <div class="footer-col"><h4>서비스</h4><a href="#" onclick="navigateTo('stations')">충전소 찾기</a><a href="#">예약 관리</a><a href="#">요금 안내</a></div>
+            <div class="footer-col"><h4>고객지원</h4><a href="#">공지사항</a><a href="#">자주 묻는 질문</a><a href="#">고객센터 1588-0000</a></div>
+            <div class="footer-col"><h4>회사</h4><a href="#">회사 소개</a><a href="#">개인정보처리방침</a><a href="#">이용약관</a></div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ========== STATIONS ========== -->
+  <!-- ========== 충전소 찾기 (네이버지도 스타일) ========== -->
+  <div class="page" id="page-stations">
+    <div class="nv-layout">
+
+      <!-- 사이드바 -->
+      <div class="nv-sidebar" id="nvSidebar">
+
+        <!-- 검색창 -->
+        <div class="nv-search-box">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="stationSearch" placeholder="충전소, 지역, 주소 검색..."
+            onkeydown="if(event.key==='Enter') doSearch()">
+          <button class="search-clear" id="searchClear" onclick="clearSearch()" title="지우기">✕</button>
+          <button class="nv-search-btn" onclick="doSearch()" title="검색">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
+        </div>
+
+        <!-- 필터 영역 -->
+        <div class="nv-filter-section">
+          <!-- 충전 속도 -->
+          <div class="nv-filter-group">
+            <span class="nv-filter-label">충전 속도</span>
+            <div class="nv-filter-row">
+              <button class="nv-chip active" data-mf="all"  onclick="setMapFilter('all',this)">전체</button>
+              <button class="nv-chip"        data-mf="fast" onclick="setMapFilter('fast',this)">⚡ 급속</button>
+              <button class="nv-chip"        data-mf="slow" onclick="setMapFilter('slow',this)">🔌 완속</button>
+            </div>
+          </div>
+          <!-- 이용 상태 -->
+          <div class="nv-filter-group">
+            <span class="nv-filter-label">이용 상태</span>
+            <div class="nv-filter-row">
+              <button class="nv-chip active" data-group="status" data-val="all"       onclick="setChip(this)">전체</button>
+              <button class="nv-chip"        data-group="status" data-val="available" onclick="setChip(this)">이용 가능</button>
+              <button class="nv-chip"        data-group="status" data-val="busy"      onclick="setChip(this)">혼잡</button>
+              <button class="nv-chip"        data-group="status" data-val="full"      onclick="setChip(this)">만석</button>
+            </div>
+          </div>
+          <!-- 선택된 필터 태그 + 초기화 -->
+          <div class="nv-active-filter-wrap" id="nvActiveFilterWrap" style="display:none">
+            <div class="nv-active-tags" id="nvActiveTags"></div>
+            <button class="nv-reset-btn" onclick="resetFilters()">초기화</button>
+          </div>
+        </div>
+
+        <!-- 반경 카운트 -->
+        <div class="nv-count-bar" id="nvCountBar">
+          <span class="nv-count-dot"></span>
+          <span id="nvCountText">주변 충전소를 불러오는 중...</span>
+        </div>
+
+        <!-- 충전소 리스트 -->
+        <div class="nv-list" id="nvStationList">
+          <!-- 스켈레톤 -->
+          <div class="nv-skel-item"><div class="nv-skel-title"></div><div class="nv-skel-sub"></div></div>
+          <div class="nv-skel-item"><div class="nv-skel-title"></div><div class="nv-skel-sub"></div></div>
+          <div class="nv-skel-item"><div class="nv-skel-title"></div><div class="nv-skel-sub"></div></div>
+          <div class="nv-skel-item"><div class="nv-skel-title"></div><div class="nv-skel-sub"></div></div>
+        </div>
+
+        <!-- 사이드바 하단 고정 카드 (마커/리스트 클릭 시 표시) -->
+        <div class="nv-sidebar-card" id="mapStationCard">
+          <div class="nv-sidebar-card-header">
+            <div class="nv-sidebar-card-info">
+              <div id="card-name" class="nv-card-name"></div>
+              <div id="card-addr" class="nv-card-addr"></div>
+              <div class="nv-card-tags">
+                <span id="card-type" class="nv-tag type"></span>
+                <span id="card-stat" class="nv-tag stat"></span>
+                <span id="card-dist" class="nv-tag dist"></span>
+              </div>
+            </div>
+            <button class="nv-card-close" onclick="closeMapCard()">✕</button>
+          </div>
+          <div class="nv-sidebar-card-btns">
+            <button id="card-navi-btn" class="nv-fixbar-btn navi">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+              길찾기
+            </button>
+            <button id="card-reserve-btn" class="nv-fixbar-btn reserve" onclick="handleMapReserve()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              예약하기
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 사이드바 토글 버튼 (항상 보임) -->
+      <button class="nv-toggle-btn" id="nvToggleBtn" onclick="toggleNvSidebar()" title="사이드바 접기/펼치기">
+        <svg id="nvToggleIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+
+      <!-- 지도 영역 -->
+      <div class="nv-map-area">
+        <!-- 내 위치 버튼 -->
+        <button class="nv-myloc-btn" onclick="goToMyLocation()" title="내 위치">🎯</button>
+
+        <!-- 카카오맵 -->
+        <div id="kakaoMap" style="width:100%;height:100%"></div>
+
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========== RESERVATIONS ========== -->
+  <div class="page" id="page-reservations">
+    <div class="page-container">
+      <div class="page-header"><h1>내 예약</h1><p>현재 예약 내역을 확인하고 관리하세요</p></div>
+      <div class="res-tabs">
+        <button class="res-tab active" onclick="switchResTab('upcoming', this)">예정된 예약 <span class="tab-count">2</span></button>
+        <button class="res-tab" onclick="switchResTab('ongoing', this)">진행 중 <span class="tab-count pulse-count">1</span></button>
+        <button class="res-tab" onclick="switchResTab('done', this)">완료된 예약</button>
+      </div>
+      <div id="res-upcoming" class="res-list">
+      </div>
+
+      <div id="res-ongoing" class="res-list hidden">
+        <div class="res-card charging-card">
+          <div class="res-card-accent" style="background:var(--primary)"></div>
+          <div class="charging-top-bar"><div class="charging-bar-fill" style="width:57%"></div></div>
+          <div class="res-card-left">
+            <div class="res-status ongoing">⚡ 충전 중</div>
+            <h3>서초 반포점</h3>
+            <p class="res-addr">📍 서울 서초구 반포대로 58</p>
+            <div class="res-meta"><span>⚡ 급속 50kW</span><span>🔋 34kWh / 60kWh</span></div>
+            <div class="charge-progress-wrap">
+              <div class="charge-progress-bar"><div class="charge-progress-fill" style="width:57%"><div class="charge-glow"></div></div></div>
+              <div class="charge-progress-info"><span class="charge-pct">57%</span><span class="charge-remain">약 28분 남음</span></div>
+            </div>
+          </div>
+          <div class="res-card-right">
+            <div class="res-charger">충전기 #2</div>
+            <div class="res-cost">예상 요금<strong>₩ 8,500</strong></div>
+          </div>
+        </div>
+      </div>
+      <div id="res-done" class="res-list hidden">
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MYPAGE ========== -->
+  <div class="page" id="page-mypage">
+    <div class="page-container">
+      <div class="mypage-profile">
+        <div class="profile-avatar-wrap">
+          <div class="profile-avatar">🧑</div>
+          <div class="profile-level">일반</div>
+        </div>
+        <div class="profile-info">
+          <h2>홍길동 님 <span class="welcome-emoji">👋</span></h2>
+          <p><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3a5255545d7a5f425b574a565f14595557">[email&#160;protected]</a> · 010-1234-5678</p>
+          <div class="profile-tags">
+            <span class="tag">일반 회원</span>
+            <span class="tag green">차량 등록됨</span>
+          </div>
+        </div>
+        <button class="btn-edit">프로필 수정</button>
+      </div>
+
+      <div class="mypage-summary">
+        <div class="ms-card"><div class="ms-icon-wrap" style="background:#EEF4FF">⚡</div><div class="ms-body"><span class="ms-num">12회</span><span class="ms-label">이번 달 충전</span></div></div>
+        <div class="ms-card"><div class="ms-icon-wrap" style="background:#EEF4FF">🔋</div><div class="ms-body"><span class="ms-num">284 kWh</span><span class="ms-label">총 충전량</span></div></div>
+        <div class="ms-card"><div class="ms-icon-wrap" style="background:#FEF9E7">💰</div><div class="ms-body"><span class="ms-num">₩68,400</span><span class="ms-label">이번 달 요금</span></div></div>
+        <div class="ms-card"><div class="ms-icon-wrap" style="background:#EEF4FF">🌿</div><div class="ms-body"><span class="ms-num">128 kg</span><span class="ms-label">CO₂ 절감</span></div></div>
+      </div>
+
+      <div class="my-section full-width">
+        <div class="my-section-header">
+          <h3>충전 이력</h3>
+          <select class="chart-period" onchange="renderChart(this.value)">
+            <option value="week">최근 1주</option>
+            <option value="month" selected>이번 달</option>
+            <option value="3month">최근 3개월</option>
+          </select>
+        </div>
+        <div class="chart-wrap"><canvas id="chargeChart" height="160"></canvas></div>
+      </div>
+
+      <div class="my-section full-width">
+        <div class="my-section-header">
+          <h3>내 차량</h3>
+          <button class="btn-sm" onclick="showToast('차량 수정 기능은 준비 중입니다', '')">수정</button>
+        </div>
+        <!-- 배터리 위젯 -->
+        <div class="battery-widget">
+          <div class="bw-car-info">
+            <div class="bw-car-icon">🚗</div>
+            <div class="bw-car-detail">
+              <strong>현대 아이오닉 6</strong>
+              <span>12가 3456 · 77.4kWh</span>
+            </div>
+          </div>
+          <div class="bw-battery-section">
+            <div class="bw-battery-top">
+              <div class="bw-battery-pct" id="batteryPct">78%</div>
+              <div class="bw-battery-status" id="batteryStatus">
+                <span class="bw-status-dot idle"></span>
+                대기 중
+              </div>
+            </div>
+            <div class="bw-battery-bar-wrap">
+              <div class="bw-battery-bar">
+                <div class="bw-battery-fill" id="batteryFill" style="width:78%"></div>
+                <div class="bw-battery-tip"></div>
+              </div>
+            </div>
+            <div class="bw-battery-info">
+              <span class="bw-range" id="batteryRange">🚗 주행가능 <strong>342 km</strong></span>
+              <span class="bw-temp">🌡 배터리 22°C</span>
+            </div>
+          </div>
+          <div class="bw-stats">
+            <div class="bw-stat-item">
+              <span class="bw-stat-icon">⚡</span>
+              <span class="bw-stat-val">284 kWh</span>
+              <span class="bw-stat-label">누적 충전량</span>
+            </div>
+            <div class="bw-stat-divider"></div>
+            <div class="bw-stat-item">
+              <span class="bw-stat-icon">💰</span>
+              <span class="bw-stat-val">₩68,400</span>
+              <span class="bw-stat-label">이번 달 요금</span>
+            </div>
+            <div class="bw-stat-divider"></div>
+            <div class="bw-stat-item">
+              <span class="bw-stat-icon">🌿</span>
+              <span class="bw-stat-val">128 kg</span>
+              <span class="bw-stat-label">CO₂ 절감</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn-add-car">+ 차량 추가</button>
+      </div>
+
+      <!-- 충전 요금 계산기 -->
+      <div class="my-section full-width">
+        <div class="my-section-header">
+          <h3>⚡ 충전 요금 계산기</h3>
+          <span class="calc-badge">실시간 계산</span>
+        </div>
+        <div class="calc-wrap">
+          <div class="calc-row">
+            <div class="calc-field">
+              <label>충전 타입</label>
+              <div class="calc-type-btns">
+                <button class="calc-type-btn active" data-rate="300" onclick="setCalcType(this, 300)">급속 50kW<span>300원/kWh</span></button>
+                <button class="calc-type-btn" data-rate="280" onclick="setCalcType(this, 280)">급속 100kW<span>280원/kWh</span></button>
+                <button class="calc-type-btn" data-rate="240" onclick="setCalcType(this, 240)">완속 7kW<span>240원/kWh</span></button>
+              </div>
+            </div>
+          </div>
+          <div class="calc-row">
+            <div class="calc-field">
+              <label>충전 시간 <span id="calcTimeLabel">30분</span></label>
+              <input type="range" id="calcTime" min="10" max="120" value="30" step="5" oninput="updateCalc()">
+              <div class="calc-range-labels"><span>10분</span><span>2시간</span></div>
+            </div>
+            <div class="calc-field">
+              <label>현재 배터리</label>
+              <div class="calc-battery-row">
+                <input type="number" id="calcBattery" min="0" max="100" value="30" oninput="updateCalc()">
+                <span>%</span>
+              </div>
+            </div>
+          </div>
+          <div class="calc-result">
+            <div class="calc-result-item">
+              <span class="cr-label">예상 충전량</span>
+              <span class="cr-val" id="calcKwh">2.5 kWh</span>
+            </div>
+            <div class="calc-result-divider"></div>
+            <div class="calc-result-item highlight">
+              <span class="cr-label">예상 요금</span>
+              <span class="cr-val" id="calcCost">₩ 750</span>
+            </div>
+            <div class="calc-result-divider"></div>
+            <div class="calc-result-item">
+              <span class="cr-label">충전 후 배터리</span>
+              <span class="cr-val" id="calcAfter">33%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 즐겨찾기 충전소 -->
+      <div class="my-section full-width">
+        <div class="my-section-header">
+          <h3>⭐ 즐겨찾기 충전소</h3>
+          <span class="fav-count-badge" id="favCountBadge">0개</span>
+        </div>
+        <div id="favStationList">
+          <div class="fav-empty">
+            <span>💛</span>
+            <p>충전소 카드의 ♡ 버튼을 눌러<br>자주 가는 충전소를 저장해보세요</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 고객센터 ========== -->
+  <div class="page" id="page-support">
+    <div class="page-container">
+      <div class="page-header">
+        <h1>💬 고객센터</h1>
+        <p>궁금한 점이 있으시면 언제든지 문의해주세요</p>
+      </div>
+
+      <!-- 탭 -->
+      <div class="res-tabs" id="supportTabs">
+        <button class="res-tab active" onclick="switchSupportTab('notice', this)">📢 공지사항</button>
+        <button class="res-tab" onclick="switchSupportTab('faq', this)">❓ FAQ</button>
+        <button class="res-tab" onclick="switchSupportTab('inquiry', this)">✉️ 1:1 문의</button>
+      </div>
+
+      <!-- 공지사항 탭 -->
+      <div id="support-notice">
+        <div class="support-notice-list">
+          <div class="notice-item pinned" onclick="toggleNotice(this)">
+            <div class="notice-item-header">
+              <span class="notice-tag pin">📌 공지</span>
+              <span class="notice-title">ChargeNow 서비스 이용 약관 개정 안내</span>
+              <span class="notice-date">2026.03.20</span>
+              <span class="notice-arrow">▾</span>
+            </div>
+            <div class="notice-body">
+              <p>안녕하세요, ChargeNow입니다.<br><br>
+              서비스 품질 향상을 위해 이용 약관이 일부 개정될 예정입니다.<br>
+              시행일: <strong>2026년 4월 1일</strong><br><br>
+              주요 변경 사항:<br>
+              · 예약 취소 정책 변경 (충전 시작 30분 전까지 무료 취소)<br>
+              · 개인정보 보관 기간 명시 강화<br>
+              · 포인트 적립 정책 신설<br><br>
+              자세한 내용은 이용약관 페이지에서 확인하실 수 있습니다.</p>
+            </div>
+          </div>
+          <div class="notice-item pinned" onclick="toggleNotice(this)">
+            <div class="notice-item-header">
+              <span class="notice-tag pin">📌 공지</span>
+              <span class="notice-title">신규 충전소 오픈 안내 (강동·성동 지역)</span>
+              <span class="notice-date">2026.03.15</span>
+              <span class="notice-arrow">▾</span>
+            </div>
+            <div class="notice-body">
+              <p>안녕하세요, ChargeNow입니다.<br><br>
+              서울 강동구·성동구 지역에 신규 충전소 3개소가 추가 오픈되었습니다.<br><br>
+              · 강동 천호점 — 급속 50kW × 4기, 완속 7kW × 6기<br>
+              · 성동 왕십리점 — 급속 100kW × 2기, 완속 7kW × 4기<br>
+              · 성동 행당점 — 급속 50kW × 2기<br><br>
+              앱에서 바로 예약하실 수 있습니다. 많은 이용 부탁드립니다!</p>
+            </div>
+          </div>
+          <div class="notice-item" onclick="toggleNotice(this)">
+            <div class="notice-item-header">
+              <span class="notice-tag event">🎉 이벤트</span>
+              <span class="notice-title">3월 봄맞이 충전 요금 10% 할인 이벤트</span>
+              <span class="notice-date">2026.03.01</span>
+              <span class="notice-arrow">▾</span>
+            </div>
+            <div class="notice-body">
+              <p>봄맞이 특별 이벤트로 3월 한 달간 급속 충전 요금이 10% 할인됩니다.<br><br>
+              · 대상: 전 회원<br>
+              · 기간: 2026년 3월 1일 ~ 31일<br>
+              · 할인 방법: 예약 시 자동 적용<br><br>
+              봄나들이 전 충전 걱정 없이 ChargeNow와 함께하세요! ⚡</p>
+            </div>
+          </div>
+          <div class="notice-item" onclick="toggleNotice(this)">
+            <div class="notice-item-header">
+              <span class="notice-tag maint">🔧 점검</span>
+              <span class="notice-title">서버 정기 점검 안내 (3/10 새벽 2시~4시)</span>
+              <span class="notice-date">2026.03.08</span>
+              <span class="notice-arrow">▾</span>
+            </div>
+            <div class="notice-body">
+              <p>안정적인 서비스 제공을 위해 정기 서버 점검을 진행합니다.<br><br>
+              · 일시: 2026년 3월 10일(화) 02:00 ~ 04:00<br>
+              · 영향: 예약 및 결제 서비스 일시 중단<br>
+              · 충전 이용 중인 차량은 영향 없음<br><br>
+              점검 시간 중 불편을 드려 죄송합니다.</p>
+            </div>
+          </div>
+          <div class="notice-item" onclick="toggleNotice(this)">
+            <div class="notice-item-header">
+              <span class="notice-tag general">📋 일반</span>
+              <span class="notice-title">ChargeNow 앱 v2.5 업데이트 안내</span>
+              <span class="notice-date">2026.02.20</span>
+              <span class="notice-arrow">▾</span>
+            </div>
+            <div class="notice-body">
+              <p>ChargeNow 앱이 v2.5로 업데이트되었습니다.<br><br>
+              주요 변경사항:<br>
+              · 즐겨찾기 충전소 최대 20개로 확대<br>
+              · 충전 완료 예상 시간 표시 기능 추가<br>
+              · 지도 마커 디자인 개선<br>
+              · 기타 버그 수정 및 성능 개선</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ 탭 -->
+      <div id="support-faq" style="display:none">
+        <div class="faq-categories">
+          <button class="faq-cat-btn active" onclick="filterFaq('all', this)">전체</button>
+          <button class="faq-cat-btn" onclick="filterFaq('reserve', this)">예약</button>
+          <button class="faq-cat-btn" onclick="filterFaq('charge', this)">충전</button>
+          <button class="faq-cat-btn" onclick="filterFaq('payment', this)">요금/결제</button>
+          <button class="faq-cat-btn" onclick="filterFaq('account', this)">계정</button>
+        </div>
+        <div class="faq-list" id="faqList">
+          <div class="faq-item" data-cat="reserve" onclick="toggleFaq(this)">
+            <div class="faq-question">
+              <span class="faq-cat-tag reserve">예약</span>
+              <span class="faq-q-text">예약 취소는 어떻게 하나요?</span>
+              <span class="faq-arrow">▾</span>
+            </div>
+            <div class="faq-answer">
+              <p>내 예약 페이지에서 예약 취소가 가능합니다.<br>
+              충전 시작 <strong>30분 전</strong>까지는 무료로 취소할 수 있으며,<br>
+              이후 취소 시에는 예약 수수료가 발생할 수 있습니다.</p>
+            </div>
+          </div>
+          <div class="faq-item" data-cat="reserve" onclick="toggleFaq(this)">
+            <div class="faq-question">
+              <span class="faq-cat-tag reserve">예약</span>
+              <span class="faq-q-text">예약 시간에 늦으면 어떻게 되나요?</span>
+              <span class="faq-arrow">▾</span>
+            </div>
+            <div class="faq-answer">
+              <p>예약 시간 이후 <strong>15분</strong>이 지나면 예약이 자동으로 취소됩니다.<br>
+              늦을 것 같은 경우 미리 예약 시간을 변경하거나 취소 후 재예약하시길 권장합니다.</p>
+            </div>
+          </div>
+          <div class="faq-item" data-cat="charge" onclick="toggleFaq(this)">
+            <div class="faq-question">
+              <span class="faq-cat-tag charge">충전</span>
+              <span class="faq-q-text">급속 충전과 완속 충전의 차이가 뭔가요?</span>
+              <span class="faq-arrow">▾</span>
+            </div>
+            <div class="faq-answer">
+              <p><strong>급속 충전</strong>은 50kW~200kW 출력으로 약 20~40분 내 80%까지 충전 가능합니다.<br>
+              <strong>완속 충전</strong>은 7kW 출력으로 완전 충전까지 6~8시간이 소요되지만 요금이 저렴합니다.<br>
+              차량 배터리 수명을 위해 일상적인 이용 시에는 완속 충전을 권장합니다.</p>
+            </div>
+          </div>
+          <div class="faq-item" data-cat="charge" onclick="toggleFaq(this)">
+            <div class="faq-question">
+              <span class="faq-cat-tag charge">충전</span>
+              <span class="faq-q-text">충전 중에 오류가 발생했어요. 어떻게 해야 하나요?</span>
+              <span class="faq-arrow">▾</span>
+            </div>
+            <div class="faq-answer">
+              <p>충전 중 오류 발생 시 아래 순서로 조치해주세요.<br><br>
+              1. 충전 커넥터를 분리 후 재연결<br>
+              2. 앱에서 충전 상태 새로고침<br>
+              3. 오류가 지속되면 충전기 옆 QR코드를 통해 즉시 신고<br>
+              4. 고객센터 1:1 문의로 접수 시 빠른 처리를 도와드립니다.</p>
+            </div>
+          </div>
+          <div class="faq-item" data-cat="payment" onclick="toggleFaq(this)">
+            <div class="faq-question">
+              <span class="faq-cat-tag payment">요금/결제</span>
+              <span class="faq-q-text">충전 요금은 어떻게 계산되나요?</span>
+              <span class="faq-arrow">▾</span>
+            </div>
+            <div class="faq-answer">
+              <p>충전 요금은 <strong>실제 충전된 전력량(kWh)</strong>에 단가를 곱해 계산됩니다.<br><br>
+              · 급속 50kW: 300원/kWh<br>
+              · 급속 100kW 이상: 280원/kWh<br>
+              · 완속 7kW: 240원/kWh<br><br>
+              마이페이지의 <strong>충전 요금 계산기</strong>를 통해 예상 요금을 미리 확인하실 수 있습니다.</p>
+            </div>
+          </div>
+          <div class="faq-item" data-cat="payment" onclick="toggleFaq(this)">
+            <div class="faq-question">
+              <span class="faq-cat-tag payment">요금/결제</span>
+              <span class="faq-q-text">결제 수단은 어떤 것을 지원하나요?</span>
+              <span class="faq-arrow">▾</span>
+            </div>
+            <div class="faq-answer">
+              <p>현재 지원하는 결제 수단입니다.<br><br>
+              · 신용카드 / 체크카드 (국내 전 카드사)<br>
+              · 카카오페이 / 네이버페이<br>
+              · ChargeNow 포인트 (충전 완료 시 적립)<br><br>
+              간편결제 등록 후에는 별도 인증 없이 자동 결제됩니다.</p>
+            </div>
+          </div>
+          <div class="faq-item" data-cat="account" onclick="toggleFaq(this)">
+            <div class="faq-question">
+              <span class="faq-cat-tag account">계정</span>
+              <span class="faq-q-text">비밀번호를 잊어버렸어요.</span>
+              <span class="faq-arrow">▾</span>
+            </div>
+            <div class="faq-answer">
+              <p>로그인 화면 하단의 <strong>비밀번호 찾기</strong>를 클릭하세요.<br>
+              가입 시 등록한 이메일 주소를 입력하면 재설정 링크가 발송됩니다.<br>
+              이메일을 받지 못한 경우 스팸함을 확인하거나 1:1 문의로 접수해주세요.</p>
+            </div>
+          </div>
+          <div class="faq-item" data-cat="account" onclick="toggleFaq(this)">
+            <div class="faq-question">
+              <span class="faq-cat-tag account">계정</span>
+              <span class="faq-q-text">회원 탈퇴는 어떻게 하나요?</span>
+              <span class="faq-arrow">▾</span>
+            </div>
+            <div class="faq-answer">
+              <p>마이페이지 → 프로필 수정 → 하단 <strong>회원 탈퇴</strong> 버튼을 통해 탈퇴하실 수 있습니다.<br><br>
+              탈퇴 시 유의사항:<br>
+              · 예약 중인 내역은 자동 취소됩니다<br>
+              · 잔여 포인트는 즉시 소멸됩니다<br>
+              · 탈퇴 후 30일 이내 재가입 불가</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1:1 문의 탭 -->
+      <div id="support-inquiry" style="display:none">
+        <!-- 비로그인 안내 -->
+        <div class="inquiry-login-required" id="inquiryLoginRequired">
+          <div class="inquiry-lock-icon">🔐</div>
+          <h3>로그인이 필요한 서비스입니다</h3>
+          <p>1:1 문의는 로그인 후 이용하실 수 있습니다.<br>로그인 후 문의를 남겨주시면 빠르게 답변드리겠습니다.</p>
+          <button class="inquiry-login-btn" onclick="openLoginModal()">로그인하기</button>
+        </div>
+        <!-- 로그인 후 문의 폼 -->
+        <div class="inquiry-form-wrap" id="inquiryFormWrap" style="display:none">
+          <div class="inquiry-form-card">
+            <h3 class="inquiry-form-title">✉️ 문의 작성</h3>
+            <div class="inquiry-field">
+              <label>문의 유형</label>
+              <div class="inquiry-type-btns">
+                <button class="inquiry-type-btn active" onclick="selectInquiryType(this)">예약 문의</button>
+                <button class="inquiry-type-btn" onclick="selectInquiryType(this)">충전 오류</button>
+                <button class="inquiry-type-btn" onclick="selectInquiryType(this)">결제 문의</button>
+                <button class="inquiry-type-btn" onclick="selectInquiryType(this)">계정 문의</button>
+                <button class="inquiry-type-btn" onclick="selectInquiryType(this)">기타</button>
+              </div>
+            </div>
+            <div class="inquiry-field">
+              <label>제목</label>
+              <input type="text" id="inquiryTitle" class="inquiry-input" placeholder="문의 제목을 입력해주세요">
+            </div>
+            <div class="inquiry-field">
+              <label>내용</label>
+              <textarea id="inquiryContent" class="inquiry-textarea" placeholder="문의 내용을 자세히 입력해주세요&#10;(충전소명, 날짜, 시간 등을 포함하면 더 빠른 답변이 가능합니다)"></textarea>
+            </div>
+            <div class="inquiry-field">
+              <label>연락처 이메일</label>
+              <input type="email" id="inquiryEmail" class="inquiry-input" placeholder="답변 받으실 이메일 주소">
+            </div>
+            <button class="inquiry-submit-btn" onclick="submitInquiry()">문의 접수하기</button>
+          </div>
+
+          <!-- 내 문의 내역 -->
+          <div class="inquiry-history-card" id="inquiryHistory">
+            <h3 class="inquiry-form-title">📋 내 문의 내역</h3>
+            <div class="inquiry-history-list" id="inquiryHistoryList">
+              <div class="inquiry-history-item">
+                <div class="inquiry-history-top">
+                  <span class="inquiry-status answered">답변 완료</span>
+                  <span class="inquiry-history-type">결제 문의</span>
+                  <span class="inquiry-history-date">2026.03.15</span>
+                </div>
+                <div class="inquiry-history-title">3월 충전 요금 청구 관련 문의</div>
+                <div class="inquiry-history-answer">
+                  <span class="answer-label">💬 답변</span>
+                  <p>안녕하세요. 문의하신 내용을 확인하였습니다. 3월 요금은 실시간 충전량 기준으로 자동 계산되며, 마이페이지에서 상세 내역을 확인하실 수 있습니다.</p>
+                </div>
+              </div>
+              <div class="inquiry-history-item">
+                <div class="inquiry-history-top">
+                  <span class="inquiry-status pending">답변 대기</span>
+                  <span class="inquiry-history-type">충전 오류</span>
+                  <span class="inquiry-history-date">2026.03.28</span>
+                </div>
+                <div class="inquiry-history-title">강남 코엑스점 충전기 오류 신고</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<!-- ===== 충전소 상세 MODAL ===== -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+  <div class="modal" id="modal" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-tabs">
+      <button class="modal-tab active" onclick="switchModalTab('reserve', this)">예약하기</button>
+      <button class="modal-tab" onclick="switchModalTab('info', this)">충전소 정보</button>
+      <button class="modal-tab" onclick="switchModalTab('review', this)">리뷰</button>
+    </div>
+    <div id="modalTabReserve">
+    <div class="modal-steps" id="modalSteps">
+      <div class="step-item active" data-step="1"><div class="step-circle">1</div><span>충전기</span></div>
+      <div class="step-line"></div>
+      <div class="step-item" data-step="2"><div class="step-circle">2</div><span>날짜</span></div>
+      <div class="step-line"></div>
+      <div class="step-item" data-step="3"><div class="step-circle">3</div><span>시간</span></div>
+    </div>
+    <div id="modalContent"></div>
+    </div><!-- end modalTabReserve -->
+    <div id="modalTabInfo" style="display:none">
+      <div id="modalInfoContent"></div>
+    </div>
+    <div id="modalTabReview" style="display:none">
+      <div id="modalReviewContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast"></div>
+
+
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=5cc1f47f2bb48afc9e7ef7f4c698644b&libraries=services"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="../js/app.js"></script>
+</body>
+</html>
