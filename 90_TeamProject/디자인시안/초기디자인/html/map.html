@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>충전소 찾기 — EVSPOT</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ev: {
+              black: '#0A0A0A', white: '#F5F5F0', green: '#00E676',
+              lime: '#C6F135', gray: '#1C1C1C', muted: '#6B6B6B', border: '#2A2A2A',
+            }
+          },
+          fontFamily: {
+            sans: ['DM Sans', 'Noto Sans KR', 'sans-serif'],
+            mono: ['Space Grotesk', 'monospace'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { background: #0A0A0A; color: #F5F5F0; font-family: 'DM Sans','Noto Sans KR',sans-serif; -webkit-font-smoothing: antialiased; }
+
+    .nav-blur { backdrop-filter: blur(20px); background: rgba(10,10,10,0.9); border-bottom: 1px solid rgba(255,255,255,0.07); }
+
+    .btn-primary { background: #00E676; color: #0A0A0A; font-weight: 700; transition: all .2s; }
+    .btn-primary:hover { background: #C6F135; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(0,230,118,.35); }
+    .btn-outline { border: 1.5px solid #2A2A2A; color: #F5F5F0; font-weight: 500; transition: all .2s; }
+    .btn-outline:hover { border-color: #00E676; color: #00E676; }
+
+    .badge-available { background: rgba(0,230,118,.15); color: #00E676; }
+    .badge-busy      { background: rgba(255,82,82,.15);  color: #FF5252; }
+    .badge-charging  { background: rgba(255,193,7,.15);  color: #FFC107; }
+
+    /* 왼쪽 패널 스크롤 */
+    .panel-scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #2A2A2A transparent; }
+    .panel-scroll::-webkit-scrollbar { width: 4px; }
+    .panel-scroll::-webkit-scrollbar-thumb { background: #2A2A2A; border-radius: 99px; }
+
+    /* 지도 영역 */
+    .map-area {
+      background:
+        repeating-linear-gradient(0deg,   transparent, transparent 49px, #1E1E1E 50px),
+        repeating-linear-gradient(90deg,  transparent, transparent 49px, #1E1E1E 50px),
+        #161616;
+      position: relative; overflow: hidden;
+    }
+
+    /* 지도 도로 효과 */
+    .map-road-h { position: absolute; height: 2px; background: #252525; left: 0; right: 0; }
+    .map-road-v { position: absolute; width: 2px;  background: #252525; top: 0; bottom: 0; }
+
+    /* 충전소 핀 */
+    .station-pin {
+      position: absolute;
+      transform: translate(-50%, -100%);
+      cursor: pointer;
+      transition: transform .2s;
+      z-index: 10;
+    }
+    .station-pin:hover { transform: translate(-50%, -100%) scale(1.2); z-index: 20; }
+    .station-pin.active { transform: translate(-50%, -100%) scale(1.25); z-index: 30; }
+
+    .pin-body {
+      width: 40px; height: 40px; border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,.5);
+      border: 2px solid rgba(255,255,255,.15);
+    }
+    .pin-body svg { transform: rotate(45deg); }
+
+    /* 카드 */
+    .station-card { background: #1C1C1C; border: 1px solid #2A2A2A; border-radius: 16px; transition: border-color .2s, background .2s; cursor: pointer; }
+    .station-card:hover, .station-card.active { border-color: rgba(0,230,118,.5); background: #222; }
+
+    /* 필터 탭 */
+    .filter-tab { border: 1px solid #2A2A2A; border-radius: 99px; padding: 6px 14px; font-size: 13px; color: #6B6B6B; cursor: pointer; transition: all .2s; }
+    .filter-tab:hover, .filter-tab.active { border-color: #00E676; color: #00E676; background: rgba(0,230,118,.08); }
+
+    /* 검색 인풋 */
+    .search-input { background: #1C1C1C; border: 1px solid #2A2A2A; color: #F5F5F0; transition: border-color .2s; }
+    .search-input:focus { outline: none; border-color: #00E676; }
+    .search-input::placeholder { color: #6B6B6B; }
+
+    /* 모달 */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 100; display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .3s; }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-box { background: #1C1C1C; border: 1px solid #2A2A2A; border-radius: 24px 24px 0 0; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1); padding: 28px 24px 36px; }
+    .modal-overlay.open .modal-box { transform: translateY(0); }
+
+    /* 슬롯 시각화 */
+    .slot-bar { height: 6px; flex: 1; border-radius: 99px; transition: background .3s; }
+
+    /* 시간 슬롯 그리드 */
+    .time-btn { border: 1px solid #2A2A2A; border-radius: 10px; padding: 10px 6px; font-size: 12px; text-align: center; cursor: pointer; transition: all .15s; color: #6B6B6B; }
+    .time-btn:hover:not(.disabled) { border-color: #00E676; color: #00E676; background: rgba(0,230,118,.08); }
+    .time-btn.selected { border-color: #00E676; background: rgba(0,230,118,.2); color: #00E676; font-weight: 600; }
+    .time-btn.disabled { opacity: .3; cursor: not-allowed; text-decoration: line-through; }
+
+    /* 토스트 */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1C1C1C; border: 1px solid #00E676; color: #F5F5F0; padding: 14px 24px; border-radius: 12px; font-size: 14px; z-index: 200; transition: transform .3s; white-space: nowrap; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* 슬롯 현황 바 */
+    .occupancy-bar { height: 4px; background: #2A2A2A; border-radius: 99px; overflow: hidden; }
+    .occupancy-fill { height: 100%; border-radius: 99px; transition: width .5s; }
+  </style>
+</head>
+
+<body class="h-screen flex flex-col overflow-hidden">
+
+  <!-- NAV -->
+  <nav class="nav-blur z-50 shrink-0">
+    <div class="max-w-full px-6 flex items-center justify-between h-16">
+      <a href="index.html" class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-ev-green flex items-center justify-center">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="#0A0A0A"/></svg>
+        </div>
+        <span class="font-mono font-bold text-lg">EV<span class="text-ev-green">SPOT</span></span>
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm text-ev-muted">
+        <a href="map.html" class="text-ev-green font-medium">충전소 찾기</a>
+        <a href="reservation.html" class="hover:text-ev-white transition-colors">예약 관리</a>
+        <a href="mypage.html" class="hover:text-ev-white transition-colors">마이페이지</a>
+      </div>
+      <a href="index.html" class="btn-outline px-4 py-2 rounded-full text-sm hidden md:block">← 홈으로</a>
+    </div>
+  </nav>
+
+  <!-- MAIN LAYOUT: 좌(패널) + 우(지도) -->
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- ── 왼쪽 패널 ── -->
+    <div class="w-full md:w-96 shrink-0 flex flex-col border-r border-ev-border">
+
+      <!-- 검색 + 필터 -->
+      <div class="p-4 border-b border-ev-border space-y-3">
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-ev-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input id="searchInput" type="text" placeholder="충전소 이름 또는 주소 검색" class="search-input w-full pl-9 pr-4 py-2.5 rounded-xl text-sm"/>
+        </div>
+        <!-- 상태 필터 -->
+        <div class="flex gap-2 flex-wrap">
+          <button class="filter-tab active" data-filter="전체" onclick="setFilter('전체',this)">전체</button>
+          <button class="filter-tab" data-filter="available" onclick="setFilter('available',this)">여유</button>
+          <button class="filter-tab" data-filter="busy"      onclick="setFilter('busy',this)">혼잡</button>
+          <button class="filter-tab" data-filter="full"      onclick="setFilter('full',this)">만석</button>
+        </div>
+        <!-- 지역 필터 -->
+        <div class="flex gap-2 overflow-x-auto pb-1 text-xs" style="scrollbar-width:none">
+          <button class="filter-tab active whitespace-nowrap" data-region="전체" onclick="setRegion('전체',this)">전체 지역</button>
+          <button class="filter-tab whitespace-nowrap" data-region="강남구" onclick="setRegion('강남구',this)">강남구</button>
+          <button class="filter-tab whitespace-nowrap" data-region="마포구" onclick="setRegion('마포구',this)">마포구</button>
+          <button class="filter-tab whitespace-nowrap" data-region="서초구" onclick="setRegion('서초구',this)">서초구</button>
+          <button class="filter-tab whitespace-nowrap" data-region="송파구" onclick="setRegion('송파구',this)">송파구</button>
+          <button class="filter-tab whitespace-nowrap" data-region="종로구" onclick="setRegion('종로구',this)">종로구</button>
+          <button class="filter-tab whitespace-nowrap" data-region="용산구" onclick="setRegion('용산구',this)">용산구</button>
+          <button class="filter-tab whitespace-nowrap" data-region="노원구" onclick="setRegion('노원구',this)">노원구</button>
+        </div>
+        <!-- 결과 수 -->
+        <p class="text-xs text-ev-muted"><span id="resultCount">10</span>개 충전소</p>
+      </div>
+
+      <!-- 충전소 목록 -->
+      <div id="stationList" class="panel-scroll flex-1 p-3 space-y-2"></div>
+    </div>
+
+    <!-- ── 오른쪽 지도 ── -->
+    <div class="hidden md:block flex-1 map-area relative">
+      <!-- 도로 (장식) -->
+      <div class="map-road-h" style="top:30%"></div>
+      <div class="map-road-h" style="top:60%"></div>
+      <div class="map-road-h" style="top:80%"></div>
+      <div class="map-road-v" style="left:25%"></div>
+      <div class="map-road-v" style="left:55%"></div>
+      <div class="map-road-v" style="left:75%"></div>
+
+      <!-- 핀들 -->
+      <div id="mapPins"></div>
+
+      <!-- 지도 범례 -->
+      <div class="absolute top-4 right-4 bg-ev-black/90 border border-ev-border rounded-xl p-4 space-y-2.5">
+        <p class="text-xs text-ev-muted font-mono mb-1">// 범례</p>
+        <div class="flex items-center gap-2 text-xs text-ev-muted"><div class="w-3 h-3 rounded-full bg-ev-green"></div>여유 있음</div>
+        <div class="flex items-center gap-2 text-xs text-ev-muted"><div class="w-3 h-3 rounded-full bg-yellow-400"></div>혼잡</div>
+        <div class="flex items-center gap-2 text-xs text-ev-muted"><div class="w-3 h-3 rounded-full bg-red-500"></div>만석</div>
+      </div>
+
+      <!-- 지도 하단 안내 -->
+      <div class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-ev-black/80 border border-ev-border rounded-full px-4 py-2 text-xs text-ev-muted">
+        핀을 클릭하면 충전소 정보를 확인할 수 있어요
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── 예약 모달 ── -->
+  <div id="modalOverlay" class="modal-overlay" onclick="closeModalOutside(event)">
+    <div class="modal-box" id="modalBox">
+      <!-- 핸들 -->
+      <div class="w-10 h-1 bg-ev-border rounded-full mx-auto mb-6"></div>
+
+      <div id="modalContent"><!-- JS로 채워짐 --></div>
+    </div>
+  </div>
+
+  <!-- 토스트 -->
+  <div id="toast" class="toast">✅ 예약이 완료되었습니다!</div>
+
+
+  <!-- JS: data.js 먼저 로드 -->
+  <script src="js/data.js"></script>
+  <script>
+    // ── 상태 ──────────────────────────────────────────────
+    let currentFilter = '전체';
+    let currentRegion = '전체';
+    let selectedStationId = null;
+    let selectedTimeSlot = null;
+    let selectedDate = null;
+
+    // ── 지도 핀 위치 (임의 배치, 실제로는 lat/lng 변환) ──
+    const pinPositions = {
+      ST001: { top: '45%', left: '62%' },
+      ST002: { top: '22%', left: '20%' },
+      ST003: { top: '65%', left: '58%' },
+      ST004: { top: '52%', left: '78%' },
+      ST005: { top: '28%', left: '46%' },
+      ST006: { top: '40%', left: '46%' },
+      ST007: { top: '15%', left: '72%' },
+      ST008: { top: '18%', left: '30%' },
+      ST009: { top: '42%', left: '66%' },
+      ST010: { top: '33%', left: '48%' },
+    };
+
+    const pinColors = { available: '#00E676', busy: '#FFC107', full: '#FF5252' };
+    const statusLabel = { available: '여유 있음', busy: '혼잡', full: '만석' };
+    const badgeCls    = { available: 'badge-available', busy: 'badge-charging', full: 'badge-busy' };
+
+    // ── 필터 함수 ──────────────────────────────────────────
+    function getFiltered() {
+      return EV_DATA.stations.filter(s => {
+        const statusOk = currentFilter === '전체' || s.status === currentFilter;
+        const regionOk = currentRegion === '전체' || s.region === currentRegion;
+        const q = document.getElementById('searchInput').value.trim().toLowerCase();
+        const searchOk = !q || s.name.toLowerCase().includes(q) || s.address.toLowerCase().includes(q);
+        return statusOk && regionOk && searchOk;
+      });
+    }
+
+    function setFilter(f, el) {
+      currentFilter = f;
+      document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      render();
+    }
+
+    function setRegion(r, el) {
+      currentRegion = r;
+      document.querySelectorAll('[data-region]').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      render();
+    }
+
+    document.getElementById('searchInput').addEventListener('input', render);
+
+    // ── 렌더: 카드 목록 ───────────────────────────────────
+    function render() {
+      const filtered = getFiltered();
+      document.getElementById('resultCount').textContent = filtered.length;
+
+      document.getElementById('stationList').innerHTML = filtered.length
+        ? filtered.map(s => stationCard(s)).join('')
+        : `<div class="text-center text-ev-muted py-16 text-sm">검색 결과가 없어요</div>`;
+
+      renderPins(filtered);
+    }
+
+    function stationCard(s) {
+      const used = s.slots.total - s.slots.available;
+      const pct  = Math.round((used / s.slots.total) * 100);
+      const fillColor = s.status === 'available' ? '#00E676' : s.status === 'busy' ? '#FFC107' : '#FF5252';
+      const isActive  = selectedStationId === s.id ? 'active' : '';
+
+      return `
+        <div class="station-card ${isActive} p-4" onclick="selectStation('${s.id}')">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex-1 mr-2">
+              <p class="font-semibold text-sm text-ev-white leading-tight">${s.name}</p>
+              <p class="text-ev-muted text-xs mt-0.5 leading-tight">${s.address}</p>
+            </div>
+            <span class="${badgeCls[s.status]} text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap">
+              ${statusLabel[s.status]}
+            </span>
+          </div>
+          <div class="flex gap-1 my-2.5">
+            ${Array.from({length: s.slots.total}, (_, i) =>
+              `<div class="slot-bar" style="background:${i < used ? fillColor + '80' : '#2A2A2A'}"></div>`
+            ).join('')}
+          </div>
+          <div class="flex items-center justify-between text-xs text-ev-muted">
+            <span>${s.slots.available}/${s.slots.total} 자리 여유</span>
+            <span>${s.chargers.find(c=>c.type==='급속')?.kw || s.chargers[0].kw}kW</span>
+            <span>${s.fee}</span>
+          </div>
+          ${s.status !== 'full' ? `
+            <button class="btn-primary w-full mt-3 py-2 rounded-xl text-xs" onclick="event.stopPropagation();openModal('${s.id}')">
+              예약하기
+            </button>` : `
+            <button class="w-full mt-3 py-2 rounded-xl text-xs border border-ev-border text-ev-muted cursor-not-allowed" disabled>
+              예약 불가 (만석)
+            </button>`}
+        </div>`;
+    }
+
+    // ── 렌더: 지도 핀 ─────────────────────────────────────
+    function renderPins(filtered) {
+      const ids = new Set(filtered.map(s => s.id));
+      document.getElementById('mapPins').innerHTML = EV_DATA.stations.map(s => {
+        const pos = pinPositions[s.id] || { top: '50%', left: '50%' };
+        const col = pinColors[s.status];
+        const isActive = selectedStationId === s.id ? 'active' : '';
+        const opacity  = ids.has(s.id) ? '1' : '0.2';
+        return `
+          <div class="station-pin ${isActive}" style="top:${pos.top};left:${pos.left};opacity:${opacity}" onclick="selectStation('${s.id}')">
+            <div class="pin-body" style="background:${col}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="${s.status==='full'?'white':'#0A0A0A'}">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ── 충전소 선택 ───────────────────────────────────────
+    function selectStation(id) {
+      selectedStationId = id;
+      render();
+      // 모바일: 바로 모달 오픈
+      if (window.innerWidth < 768) openModal(id);
+    }
+
+    // ── 모달 오픈 ─────────────────────────────────────────
+    function openModal(id) {
+      selectedStationId = id;
+      selectedTimeSlot  = null;
+      selectedDate      = null;
+      const s = EV_DATA.stations.find(st => st.id === id);
+      if (!s) return;
+
+      const today = new Date().toISOString().split('T')[0];
+
+      document.getElementById('modalContent').innerHTML = `
+        <div class="space-y-6">
+          <!-- 헤더 -->
+          <div class="flex items-start justify-between">
+            <div>
+              <span class="${badgeCls[s.status]} text-xs px-2.5 py-1 rounded-full font-medium">${statusLabel[s.status]}</span>
+              <h2 class="text-xl font-bold mt-2">${s.name}</h2>
+              <p class="text-ev-muted text-sm">${s.address}</p>
+            </div>
+            <button onclick="closeModal()" class="text-ev-muted hover:text-ev-white p-1">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <!-- 슬롯 현황 -->
+          <div class="bg-ev-black/50 rounded-xl p-4 space-y-3">
+            <div class="flex justify-between text-sm">
+              <span class="text-ev-muted">충전 슬롯 현황</span>
+              <span class="text-ev-white font-medium">${s.slots.available}개 여유 / 총 ${s.slots.total}개</span>
+            </div>
+            <div class="flex gap-1">
+              ${Array.from({length: s.slots.total}, (_, i) => {
+                const used = s.slots.total - s.slots.available;
+                const col  = i < used ? (s.status==='full'?'#FF5252':'#FFC107') : '#00E676';
+                return `<div class="slot-bar" style="background:${col}40; border: 1px solid ${col}60"></div>`;
+              }).join('')}
+            </div>
+            <div class="grid grid-cols-3 gap-3 text-xs text-center">
+              <div><p class="text-ev-muted">충전 속도</p><p class="text-ev-white font-medium mt-0.5">${s.chargers.map(c=>c.kw+'kW').join(' / ')}</p></div>
+              <div><p class="text-ev-muted">운영 시간</p><p class="text-ev-white font-medium mt-0.5">${s.operHours}</p></div>
+              <div><p class="text-ev-muted">요금</p><p class="text-ev-white font-medium mt-0.5">${s.fee}</p></div>
+            </div>
+          </div>
+
+          ${s.status !== 'full' ? `
+          <!-- 날짜 선택 -->
+          <div>
+            <p class="text-sm font-medium mb-2">날짜 선택</p>
+            <input type="date" id="datePicker" min="${today}" value="${today}"
+              class="w-full bg-ev-black/50 border border-ev-border rounded-xl px-4 py-2.5 text-sm text-ev-white"
+              style="color-scheme:dark" onchange="selectedDate=this.value"/>
+          </div>
+
+          <!-- 시간 선택 -->
+          <div>
+            <p class="text-sm font-medium mb-3">시간 선택</p>
+            <div class="grid grid-cols-4 gap-2" id="timeGrid">
+              ${EV_DATA.timeSlots.map((t, i) => {
+                // 임의로 일부 슬롯 비활성화 (이미 예약됨)
+                const disabled = [1, 3, 7].includes(i) && s.status !== 'available' ? 'disabled' : '';
+                return `<div class="time-btn ${disabled}" onclick="selectTime(this,'${t}')">${t.split(' ')[0]}</div>`;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- 차량 선택 -->
+          <div>
+            <p class="text-sm font-medium mb-2">차량</p>
+            <select id="vehicleSelect" class="w-full bg-ev-black/50 border border-ev-border rounded-xl px-4 py-2.5 text-sm text-ev-white" style="color-scheme:dark">
+              <option>테슬라 모델 3</option>
+              <option>현대 아이오닉 6</option>
+              <option>기아 EV6</option>
+              <option>BMW iX</option>
+              <option>직접 입력</option>
+            </select>
+          </div>
+
+          <!-- 예약 버튼 -->
+          <button onclick="confirmReservation('${s.id}')" class="btn-primary w-full py-3.5 rounded-xl text-sm">
+            예약 확정하기
+          </button>
+          ` : `
+          <div class="text-center py-6">
+            <p class="text-ev-muted text-sm">현재 모든 슬롯이 사용 중입니다.</p>
+            <p class="text-ev-muted text-xs mt-1">잠시 후 다시 확인해주세요.</p>
+          </div>
+          `}
+        </div>`;
+
+      // 날짜 초기값
+      selectedDate = today;
+      document.getElementById('modalOverlay').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.remove('open');
+    }
+    function closeModalOutside(e) {
+      if (e.target === document.getElementById('modalOverlay')) closeModal();
+    }
+
+    function selectTime(el, slot) {
+      if (el.classList.contains('disabled')) return;
+      document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedTimeSlot = slot;
+    }
+
+    // ── 예약 확정 ─────────────────────────────────────────
+    function confirmReservation(stationId) {
+      if (!selectedTimeSlot) {
+        alert('시간을 선택해주세요.');
+        return;
+      }
+      const s       = EV_DATA.stations.find(st => st.id === stationId);
+      const vehicle = document.getElementById('vehicleSelect')?.value || '테슬라 모델 3';
+      const date    = selectedDate || new Date().toISOString().split('T')[0];
+
+      const reservation = {
+        stationId:    s.id,
+        stationName:  s.name,
+        date,
+        timeSlot:     selectedTimeSlot,
+        chargerType:  s.chargers.find(c=>c.type==='급속')
+                        ? `급속 ${s.chargers.find(c=>c.type==='급속').kw}kW`
+                        : `완속 ${s.chargers[0].kw}kW`,
+        status:       'confirmed',
+        vehicle,
+        estimatedFee: '₩' + (Math.floor(Math.random() * 8 + 5) * 1000).toLocaleString(),
+      };
+
+      EVUtils.saveReservation(reservation);
+      closeModal();
+      showToast('✅ 예약이 완료되었어요! 예약 관리에서 확인하세요.');
+    }
+
+    // ── 토스트 ────────────────────────────────────────────
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    // ── URL 파라미터로 초기 필터 ──────────────────────────
+    function initFromURL() {
+      const params = new URLSearchParams(location.search);
+      const region = params.get('region');
+      const id     = params.get('id');
+      if (region) {
+        currentRegion = region;
+        document.querySelectorAll('[data-region]').forEach(b => {
+          b.classList.toggle('active', b.dataset.region === region);
+        });
+      }
+      if (id) {
+        selectedStationId = id;
+        setTimeout(() => openModal(id), 400);
+      }
+    }
+
+    // ── 초기화 ────────────────────────────────────────────
+    initFromURL();
+    render();
+  </script>
+</body>
+</html>

@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EV SPOT — 공유 전기차 충전 예약</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind 커스텀 설정 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ev: {
+              black:   '#0A0A0A',
+              white:   '#F5F5F0',
+              green:   '#00E676',
+              lime:    '#C6F135',
+              gray:    '#1C1C1C',
+              muted:   '#6B6B6B',
+              border:  '#2A2A2A',
+            }
+          },
+          fontFamily: {
+            sans:  ['DM Sans', 'Noto Sans KR', 'sans-serif'],
+            mono:  ['Space Grotesk', 'monospace'],
+          },
+          animation: {
+            'fade-up':    'fadeUp 0.7s ease forwards',
+            'fade-in':    'fadeIn 0.5s ease forwards',
+            'pulse-slow': 'pulse 3s ease-in-out infinite',
+          },
+          keyframes: {
+            fadeUp: {
+              '0%':   { opacity: '0', transform: 'translateY(24px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            fadeIn: {
+              '0%':   { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* ── 기본 리셋 ── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      background-color: #0A0A0A;
+      color: #F5F5F0;
+      font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── 네비게이션 ── */
+    .nav-blur {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(10,10,10,0.85);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+
+    /* ── 히어로 그라디언트 배경 ── */
+    .hero-bg {
+      background:
+        radial-gradient(ellipse 80% 60% at 60% 40%, rgba(0,230,118,0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 20% 80%, rgba(198,241,53,0.08) 0%, transparent 60%),
+        #0A0A0A;
+    }
+
+    /* ── 그린 버튼 ── */
+    .btn-primary {
+      background: #00E676;
+      color: #0A0A0A;
+      font-weight: 700;
+      transition: all 0.2s ease;
+    }
+    .btn-primary:hover {
+      background: #C6F135;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0,230,118,0.35);
+    }
+
+    /* ── 아웃라인 버튼 ── */
+    .btn-outline {
+      border: 1.5px solid rgba(255,255,255,0.2);
+      color: #F5F5F0;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .btn-outline:hover {
+      border-color: #00E676;
+      color: #00E676;
+    }
+
+    /* ── 카드 ── */
+    .card-dark {
+      background: #1C1C1C;
+      border: 1px solid #2A2A2A;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+    .card-dark:hover {
+      border-color: rgba(0,230,118,0.4);
+      transform: translateY(-4px);
+    }
+
+    /* ── 충전소 상태 배지 ── */
+    .badge-available { background: rgba(0,230,118,0.15); color: #00E676; }
+    .badge-busy      { background: rgba(255,82,82,0.15);  color: #FF5252; }
+    .badge-charging  { background: rgba(255,193,7,0.15);  color: #FFC107; }
+
+    /* ── 스탯 숫자 ── */
+    .stat-number {
+      font-family: 'Space Grotesk', monospace;
+      font-size: 3rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    /* ── 구분선 ── */
+    .divider { border-color: #2A2A2A; }
+
+    /* ── 스크롤 애니메이션용 ── */
+    .animate-on-scroll {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .animate-on-scroll.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── 충전 아이콘 pulse ── */
+    .charging-dot {
+      width: 8px; height: 8px;
+      background: #00E676;
+      border-radius: 50%;
+      animation: pulse-ring 2s ease-in-out infinite;
+    }
+    @keyframes pulse-ring {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0,230,118,0.4); }
+      50%       { box-shadow: 0 0 0 8px rgba(0,230,118,0); }
+    }
+
+    /* ── 히어로 텍스트 강조 ── */
+    .text-highlight {
+      color: #00E676;
+    }
+
+    /* ── 검색 인풋 ── */
+    .search-input {
+      background: #1C1C1C;
+      border: 1px solid #2A2A2A;
+      color: #F5F5F0;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: #00E676;
+    }
+    .search-input::placeholder { color: #6B6B6B; }
+
+    /* ── 맵 미리보기 ── */
+    .map-preview {
+      background:
+        repeating-linear-gradient(0deg,   transparent, transparent 39px, #2A2A2A 40px),
+        repeating-linear-gradient(90deg,  transparent, transparent 39px, #2A2A2A 40px),
+        #1C1C1C;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen">
+
+  <!-- ══════════════════════════════
+       NAVIGATION
+  ══════════════════════════════ -->
+  <nav class="nav-blur fixed top-0 left-0 right-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
+
+      <!-- 로고 -->
+      <a href="index.html" class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-ev-green flex items-center justify-center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="#0A0A0A" stroke="#0A0A0A" stroke-width="1" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="font-mono font-bold text-lg tracking-tight text-ev-white">EV<span class="text-ev-green">SPOT</span></span>
+      </a>
+
+      <!-- 데스크톱 메뉴 -->
+      <div class="hidden md:flex items-center gap-8 text-sm text-ev-muted">
+        <a href="map.html"         class="hover:text-ev-white transition-colors">충전소 찾기</a>
+        <a href="reservation.html" class="hover:text-ev-white transition-colors">예약 관리</a>
+        <a href="#how-it-works"    class="hover:text-ev-white transition-colors">이용 방법</a>
+        <a href="#stations"        class="hover:text-ev-white transition-colors">충전소 현황</a>
+      </div>
+
+      <!-- 우측 버튼 -->
+      <div class="flex items-center gap-3">
+        <a href="mypage.html" class="hidden md:block btn-outline px-4 py-2 rounded-full text-sm">
+          로그인
+        </a>
+        <a href="map.html" class="btn-primary px-5 py-2 rounded-full text-sm">
+          충전소 예약
+        </a>
+        <!-- 모바일 햄버거 -->
+        <button id="menuBtn" class="md:hidden text-ev-white p-2" onclick="toggleMenu()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6"  x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 모바일 메뉴 -->
+    <div id="mobileMenu" class="md:hidden hidden border-t border-ev-border px-6 py-4 flex flex-col gap-4 text-sm text-ev-muted">
+      <a href="map.html"         class="hover:text-ev-white transition-colors">충전소 찾기</a>
+      <a href="reservation.html" class="hover:text-ev-white transition-colors">예약 관리</a>
+      <a href="#how-it-works"    class="hover:text-ev-white transition-colors">이용 방법</a>
+      <a href="#stations"        class="hover:text-ev-white transition-colors">충전소 현황</a>
+      <a href="mypage.html"      class="hover:text-ev-white transition-colors">마이페이지</a>
+    </div>
+  </nav>
+
+
+  <!-- ══════════════════════════════
+       HERO SECTION
+  ══════════════════════════════ -->
+  <section class="hero-bg min-h-screen flex flex-col justify-center pt-16">
+    <div class="max-w-7xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-16 items-center">
+
+      <!-- 좌측: 텍스트 -->
+      <div class="space-y-8">
+        <!-- 뱃지 -->
+        <div class="inline-flex items-center gap-2 border border-ev-border rounded-full px-4 py-1.5 text-sm text-ev-muted animate-fade-in">
+          <div class="charging-dot"></div>
+          <span>실시간 충전소 현황 업데이트 중</span>
+        </div>
+
+        <!-- 헤드라인 -->
+        <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight tracking-tight animate-fade-up" style="animation-delay:0.1s">
+          전기차 충전,<br/>
+          <span class="text-highlight">빠르고 스마트</span>하게
+        </h1>
+
+        <!-- 서브텍스트 -->
+        <p class="text-ev-muted text-lg leading-relaxed max-w-md animate-fade-up" style="animation-delay:0.2s">
+          근처 충전소를 실시간으로 확인하고 자리를 미리 예약하세요.
+          기다림 없이 바로 충전 시작.
+        </p>
+
+        <!-- 검색 바 -->
+        <div class="animate-fade-up" style="animation-delay:0.3s">
+          <div class="flex gap-2 max-w-md">
+            <div class="relative flex-1">
+              <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-ev-muted" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input type="text" placeholder="지역 또는 충전소 이름 검색" class="search-input w-full pl-10 pr-4 py-3.5 rounded-xl text-sm"/>
+            </div>
+            <a href="map.html" class="btn-primary px-6 py-3.5 rounded-xl text-sm whitespace-nowrap">
+              검색
+            </a>
+          </div>
+        </div>
+
+        <!-- 빠른 링크 -->
+        <div class="flex flex-wrap gap-2 animate-fade-up" style="animation-delay:0.4s">
+          <span class="text-xs text-ev-muted pt-1">인기 지역:</span>
+          <button onclick="goToMap('강남구')" class="text-xs border border-ev-border rounded-full px-3 py-1 hover:border-ev-green hover:text-ev-green transition-colors">강남구</button>
+          <button onclick="goToMap('마포구')" class="text-xs border border-ev-border rounded-full px-3 py-1 hover:border-ev-green hover:text-ev-green transition-colors">마포구</button>
+          <button onclick="goToMap('서초구')" class="text-xs border border-ev-border rounded-full px-3 py-1 hover:border-ev-green hover:text-ev-green transition-colors">서초구</button>
+          <button onclick="goToMap('송파구')" class="text-xs border border-ev-border rounded-full px-3 py-1 hover:border-ev-green hover:text-ev-green transition-colors">송파구</button>
+        </div>
+      </div>
+
+      <!-- 우측: 맵 미리보기 카드 -->
+      <div class="animate-fade-up hidden md:block" style="animation-delay:0.25s">
+        <div class="relative">
+          <!-- 맵 카드 -->
+          <div class="card-dark rounded-2xl overflow-hidden">
+            <!-- 맵 미리보기 영역 -->
+            <div class="map-preview h-72 relative">
+              <!-- 충전소 핀들 (가짜) -->
+              <div class="absolute" style="top:35%; left:40%">
+                <div class="relative group cursor-pointer">
+                  <div class="w-10 h-10 rounded-full bg-ev-green flex items-center justify-center shadow-lg shadow-ev-green/30">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#0A0A0A">
+                      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                    </svg>
+                  </div>
+                  <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-ev-black border border-ev-border rounded-lg px-3 py-1.5 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                    강남 충전소 · 3자리 여유
+                  </div>
+                </div>
+              </div>
+              <div class="absolute" style="top:55%; left:60%">
+                <div class="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center shadow-lg">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#0A0A0A">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="absolute" style="top:25%; left:65%">
+                <div class="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="absolute" style="top:65%; left:28%">
+                <div class="w-8 h-8 rounded-full bg-ev-green flex items-center justify-center shadow-lg">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#0A0A0A">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                  </svg>
+                </div>
+              </div>
+              <!-- 지도 레이블 -->
+              <div class="absolute bottom-3 right-3 bg-black/60 text-ev-muted text-xs px-2 py-1 rounded">
+                서울특별시
+              </div>
+            </div>
+
+            <!-- 카드 정보 -->
+            <div class="p-5 space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="font-semibold text-ev-white">강남 테헤란로 충전소</p>
+                  <p class="text-ev-muted text-sm">서울시 강남구 테헤란로 152</p>
+                </div>
+                <span class="badge-available text-xs px-3 py-1 rounded-full font-medium">여유 있음</span>
+              </div>
+              <div class="flex items-center gap-4 text-sm">
+                <span class="text-ev-muted flex items-center gap-1">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  대기 없음
+                </span>
+                <span class="text-ev-muted">·</span>
+                <span class="text-ev-muted">급속 50kW</span>
+                <span class="text-ev-muted">·</span>
+                <span class="text-ev-muted">8개 슬롯</span>
+              </div>
+              <a href="map.html" class="btn-primary w-full py-3 rounded-xl text-sm text-center block">
+                이 충전소 예약하기
+              </a>
+            </div>
+          </div>
+
+          <!-- 범례 -->
+          <div class="absolute top-4 left-4 flex flex-col gap-1.5 bg-ev-black/80 rounded-xl p-3 border border-ev-border">
+            <div class="flex items-center gap-2 text-xs text-ev-muted">
+              <div class="w-3 h-3 rounded-full bg-ev-green"></div> 여유
+            </div>
+            <div class="flex items-center gap-2 text-xs text-ev-muted">
+              <div class="w-3 h-3 rounded-full bg-yellow-400"></div> 혼잡
+            </div>
+            <div class="flex items-center gap-2 text-xs text-ev-muted">
+              <div class="w-3 h-3 rounded-full bg-red-500"></div> 만석
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 스크롤 힌트 -->
+    <div class="flex justify-center pb-10 animate-bounce">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B6B6B" stroke-width="2">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════
+       STATS SECTION
+  ══════════════════════════════ -->
+  <section class="border-y border-ev-border py-16">
+    <div class="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
+      <div class="animate-on-scroll text-center">
+        <p class="stat-number text-ev-green">247</p>
+        <p class="text-ev-muted text-sm mt-2">등록 충전소</p>
+      </div>
+      <div class="animate-on-scroll text-center">
+        <p class="stat-number text-ev-white">1,824</p>
+        <p class="text-ev-muted text-sm mt-2">충전 슬롯</p>
+      </div>
+      <div class="animate-on-scroll text-center">
+        <p class="stat-number text-ev-green">98<span class="text-2xl">%</span></p>
+        <p class="text-ev-muted text-sm mt-2">예약 성공률</p>
+      </div>
+      <div class="animate-on-scroll text-center">
+        <p class="stat-number text-ev-white">3<span class="text-2xl">분</span></p>
+        <p class="text-ev-muted text-sm mt-2">평균 예약 시간</p>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════
+       HOW IT WORKS
+  ══════════════════════════════ -->
+  <section id="how-it-works" class="py-24">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="mb-16 animate-on-scroll">
+        <p class="text-ev-green text-sm font-mono font-medium mb-3">// 이용 방법</p>
+        <h2 class="text-4xl font-bold">3단계로 끝나는<br/>간단한 예약</h2>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-6">
+        <!-- Step 1 -->
+        <div class="card-dark rounded-2xl p-8 animate-on-scroll">
+          <div class="w-12 h-12 rounded-xl bg-ev-green/10 border border-ev-green/30 flex items-center justify-center mb-6">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00E676" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+          </div>
+          <p class="text-ev-muted text-xs font-mono mb-2">STEP 01</p>
+          <h3 class="text-xl font-semibold mb-3">충전소 검색</h3>
+          <p class="text-ev-muted text-sm leading-relaxed">
+            현재 위치 또는 목적지 근처 충전소를 지도에서 실시간으로 확인하세요.
+            여유 자리와 충전 속도를 한눈에 볼 수 있어요.
+          </p>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="card-dark rounded-2xl p-8 animate-on-scroll" style="transition-delay:0.1s">
+          <div class="w-12 h-12 rounded-xl bg-ev-green/10 border border-ev-green/30 flex items-center justify-center mb-6">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00E676" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <p class="text-ev-muted text-xs font-mono mb-2">STEP 02</p>
+          <h3 class="text-xl font-semibold mb-3">시간 예약</h3>
+          <p class="text-ev-muted text-sm leading-relaxed">
+            원하는 날짜와 시간대를 선택해 자리를 미리 확보하세요.
+            예약 확인은 문자와 앱 알림으로 즉시 받을 수 있어요.
+          </p>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="card-dark rounded-2xl p-8 animate-on-scroll" style="transition-delay:0.2s">
+          <div class="w-12 h-12 rounded-xl bg-ev-green/10 border border-ev-green/30 flex items-center justify-center mb-6">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00E676" stroke-width="2">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+          </div>
+          <p class="text-ev-muted text-xs font-mono mb-2">STEP 03</p>
+          <h3 class="text-xl font-semibold mb-3">바로 충전</h3>
+          <p class="text-ev-muted text-sm leading-relaxed">
+            예약 시간에 도착해 QR코드 또는 앱으로 인증하면 즉시 충전 시작.
+            대기줄 없이 바로 시작할 수 있어요.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════
+       STATIONS PREVIEW
+  ══════════════════════════════ -->
+  <section id="stations" class="py-24 border-t border-ev-border">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="flex items-end justify-between mb-12 animate-on-scroll">
+        <div>
+          <p class="text-ev-green text-sm font-mono font-medium mb-3">// 실시간 현황</p>
+          <h2 class="text-4xl font-bold">가까운 충전소</h2>
+        </div>
+        <a href="map.html" class="btn-outline px-5 py-2.5 rounded-full text-sm hidden md:block">
+          전체 보기 →
+        </a>
+      </div>
+
+      <div id="stationList" class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- JS로 채워짐 -->
+      </div>
+
+      <div class="mt-8 text-center md:hidden animate-on-scroll">
+        <a href="map.html" class="btn-outline px-6 py-3 rounded-full text-sm inline-block">
+          전체 충전소 보기 →
+        </a>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════
+       CTA SECTION
+  ══════════════════════════════ -->
+  <section class="py-24 border-t border-ev-border">
+    <div class="max-w-4xl mx-auto px-6 text-center animate-on-scroll">
+      <p class="text-ev-green text-sm font-mono font-medium mb-4">// 지금 시작하세요</p>
+      <h2 class="text-5xl font-bold mb-6 leading-tight">
+        더 이상 충전 자리<br/>때문에 기다리지 마세요
+      </h2>
+      <p class="text-ev-muted text-lg mb-10">
+        EVSPOT에서 미리 예약하고 스마트하게 충전하세요.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <a href="map.html" class="btn-primary px-8 py-4 rounded-full text-base">
+          충전소 찾기
+        </a>
+        <a href="reservation.html" class="btn-outline px-8 py-4 rounded-full text-base">
+          예약 관리하기
+        </a>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════
+       FOOTER
+  ══════════════════════════════ -->
+  <footer class="border-t border-ev-border py-12">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="flex flex-col md:flex-row justify-between gap-8">
+        <!-- 로고 + 설명 -->
+        <div class="max-w-xs">
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-ev-green flex items-center justify-center">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="#0A0A0A"/>
+              </svg>
+            </div>
+            <span class="font-mono font-bold text-lg">EV<span class="text-ev-green">SPOT</span></span>
+          </div>
+          <p class="text-ev-muted text-sm leading-relaxed">
+            공유 전기차 충전소 예약 관리 시스템.<br/>
+            스마트하고 편리한 충전 경험을 제공합니다.
+          </p>
+        </div>
+
+        <!-- 링크 -->
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-8 text-sm">
+          <div>
+            <p class="text-ev-white font-medium mb-4">서비스</p>
+            <ul class="space-y-2 text-ev-muted">
+              <li><a href="map.html" class="hover:text-ev-white transition-colors">충전소 찾기</a></li>
+              <li><a href="reservation.html" class="hover:text-ev-white transition-colors">예약 관리</a></li>
+              <li><a href="#" class="hover:text-ev-white transition-colors">충전 이력</a></li>
+            </ul>
+          </div>
+          <div>
+            <p class="text-ev-white font-medium mb-4">정보</p>
+            <ul class="space-y-2 text-ev-muted">
+              <li><a href="#" class="hover:text-ev-white transition-colors">이용약관</a></li>
+              <li><a href="#" class="hover:text-ev-white transition-colors">개인정보처리방침</a></li>
+              <li><a href="#" class="hover:text-ev-white transition-colors">고객센터</a></li>
+            </ul>
+          </div>
+          <div>
+            <p class="text-ev-white font-medium mb-4">데이터</p>
+            <ul class="space-y-2 text-ev-muted">
+              <li><span>공공데이터포털 연동</span></li>
+              <li><span>환경부 충전소 DB</span></li>
+              <li><span>실시간 API 연동</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-12 pt-6 border-t border-ev-border flex flex-col md:flex-row justify-between gap-2 text-ev-muted text-xs">
+        <p>© 2025 EVSPOT. 공유 전기차 충전 예약 시스템 프로젝트</p>
+        <p>공공데이터포털 전기차 충전소 정보 활용</p>
+      </div>
+    </div>
+  </footer>
+
+
+  <!-- ══════════════════════════════
+       JavaScript
+  ══════════════════════════════ -->
+  <script>
+    // ── 모바일 메뉴 토글 ──
+    function toggleMenu() {
+      const menu = document.getElementById('mobileMenu');
+      menu.classList.toggle('hidden');
+    }
+
+    // ── 지도 페이지로 이동 (지역 파라미터) ──
+    function goToMap(region) {
+      window.location.href = `map.html?region=${encodeURIComponent(region)}`;
+    }
+
+    // ── 가짜 충전소 데이터 ──
+    const stations = [
+      {
+        id: 1, name: '강남 테헤란로 충전소', address: '서울 강남구 테헤란로 152',
+        status: 'available', available: 3, total: 8, speed: '급속 100kW', wait: '대기 없음'
+      },
+      {
+        id: 2, name: '마포 상암 공영충전소', address: '서울 마포구 상암동 1600',
+        status: 'busy', available: 1, total: 6, speed: '급속 50kW', wait: '약 15분'
+      },
+      {
+        id: 3, name: '서초 양재 EV 파크', address: '서울 서초구 양재대로 340',
+        status: 'available', available: 5, total: 10, speed: '급속 200kW', wait: '대기 없음'
+      },
+      {
+        id: 4, name: '송파 잠실 롯데타워', address: '서울 송파구 올림픽로 300',
+        status: 'full', available: 0, total: 12, speed: '완속 7kW', wait: '약 40분'
+      },
+      {
+        id: 5, name: '종로 광화문 충전소', address: '서울 종로구 세종대로 175',
+        status: 'available', available: 4, total: 8, speed: '급속 50kW', wait: '대기 없음'
+      },
+      {
+        id: 6, name: '용산 이태원 충전소', address: '서울 용산구 이태원로 177',
+        status: 'busy', available: 2, total: 6, speed: '급속 100kW', wait: '약 10분'
+      }
+    ];
+
+    // ── 상태별 뱃지 설정 ──
+    const statusConfig = {
+      available: { label: '여유 있음', cls: 'badge-available' },
+      busy:      { label: '혼잡',     cls: 'badge-charging'  },
+      full:      { label: '만석',     cls: 'badge-busy'      },
+    };
+
+    // ── 충전소 카드 렌더링 ──
+    function renderStations() {
+      const container = document.getElementById('stationList');
+      container.innerHTML = stations.map((s, i) => {
+        const st = statusConfig[s.status];
+        return `
+          <div class="card-dark rounded-2xl p-6 animate-on-scroll" style="transition-delay:${i * 0.08}s">
+            <div class="flex items-start justify-between mb-4">
+              <div class="w-10 h-10 rounded-xl bg-ev-green/10 flex items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00E676" stroke-width="2">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
+              </div>
+              <span class="${st.cls} text-xs px-3 py-1 rounded-full font-medium">${st.label}</span>
+            </div>
+            <h3 class="font-semibold text-ev-white mb-1">${s.name}</h3>
+            <p class="text-ev-muted text-sm mb-4">${s.address}</p>
+            <div class="flex items-center justify-between text-xs text-ev-muted mb-4">
+              <span>${s.speed}</span>
+              <span>${s.available}/${s.total} 자리</span>
+              <span>${s.wait}</span>
+            </div>
+            <!-- 슬롯 시각화 -->
+            <div class="flex gap-1 mb-4">
+              ${Array.from({length: s.total}, (_, idx) => {
+                const used = s.total - s.available;
+                const color = idx < used ? 'bg-red-500/50' : 'bg-ev-green/60';
+                return `<div class="h-1.5 flex-1 rounded-full ${color}"></div>`;
+              }).join('')}
+            </div>
+            <a href="map.html?id=${s.id}" class="${s.status === 'full' ? 'btn-outline opacity-50 pointer-events-none' : 'btn-primary'} w-full py-2.5 rounded-xl text-sm text-center block">
+              ${s.status === 'full' ? '예약 불가' : '예약하기'}
+            </a>
+          </div>
+        `;
+      }).join('');
+
+      // 새로 생성된 요소에도 스크롤 옵저버 적용
+      observeAll();
+    }
+
+    // ── 스크롤 애니메이션 ──
+    function observeAll() {
+      const els = document.querySelectorAll('.animate-on-scroll');
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) e.target.classList.add('visible');
+        });
+      }, { threshold: 0.1 });
+      els.forEach(el => observer.observe(el));
+    }
+
+    // ── 초기화 ──
+    document.addEventListener('DOMContentLoaded', () => {
+      renderStations();
+    });
+  </script>
+</body>
+</html>
