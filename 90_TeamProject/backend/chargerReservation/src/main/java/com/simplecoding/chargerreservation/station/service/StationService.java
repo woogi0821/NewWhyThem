@@ -1,5 +1,6 @@
 package com.simplecoding.chargerreservation.station.service;
 
+import com.simplecoding.chargerreservation.charger.dto.ChargerDto;
 import com.simplecoding.chargerreservation.charger.dto.MarkerDto;
 import com.simplecoding.chargerreservation.station.dto.StationDto;
 import com.simplecoding.chargerreservation.station.entity.StationEntity;
@@ -27,72 +28,97 @@ public class StationService {
 
     private final JdbcTemplate jdbcTemplate;
     private final StationRepository stationRepository;
+    private final com.simplecoding.chargerreservation.charger.repository.ChargerRepository chargerRepository;
 
     // ==========================================
-    // 1. 조회 로직 (Repository & DTO 활용)
+    // 1. 데이터 조회 및 검색 로직 (사용자 API용)
     // ==========================================
 
     /**
-     * 반경 3km 이내의 충전소를 조회하여 마커 DTO 리스트로 반환
+     * [기능] 지도 표시용 마커 데이터 조회 (최적화 버전)
+     * - 반경 3km 이내의 충전소를 20개씩 끊어서 가져옵니다.
+     * - 지도에는 많은 정보가 필요 없으므로 필수 좌표 정보(MarkerDto)만 반환하여 가볍게 유지합니다.
      */
     @Transactional(readOnly = true)
-    public List<MarkerDto> getStationMarkers(Double lat, Double lng) {
-        double radius = 3.0; // 3km 반경 고정
+    public List<MarkerDto> getStationMarkers(Double lat, Double lng, int page) {
+        double radius = 1.5;
+        int size = 20;
+        int offset = page * size; // 페이지 번호에 따른 시작 위치 계산
 
-        // Repository의 하버사인 공식 쿼리 호출
-        List<StationEntity> stations = stationRepository.findStationsWithinRadius(lat, lng, radius);
+        // DB 쿼리 실행: 특정 위치 기반 페이징 처리된 엔티티 리스트
+        List<StationEntity> stations = stationRepository.findStationsWithinRadiusWithPaging(
+                lat, lng, radius, offset, size);
 
-        log.info("▶ [STATION] 조회된 마커 개수: {}개 (기준 좌표: {}, {})", stations.size(), lat, lng);
+        log.info("▶ [PAGING] {}페이지 조회 - 마커 개수: {}개", page, stations.size());
 
         return stations.stream()
-                .map(s -> new MarkerDto(
-                        s.getStatId(),
-                        s.getLat(),
-                        s.getLng(),
-                        "1" // 기본 상태값
-                ))
+                .map(s -> new MarkerDto(s.getStatId(), s.getLat(), s.getLng(), "1"))
                 .collect(Collectors.toList());
     }
 
     /**
-     * 충전소 상세 정보 조회
+     * [기능] 주변 충전소 목록 조회 (상세 정보 포함 리스트)
+     * - 마커 조회와 비슷하지만, 충전소 이름, 주소 등 상세 정보를 담은 StationDto를 반환합니다.
+     * - 무한 스크롤이나 목록 페이징 UI에 사용됩니다.
      */
     @Transactional(readOnly = true)
-    public StationDto getStationDetail(String statId) {
-        StationEntity station = stationRepository.findById(statId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 충전소를 찾을 수 없습니다. ID: " + statId));
+    public List<StationDto> getStationsWithDistancePaged(Double userLat, Double userLng, int page) {
+        double radius = 1.5;
+        int size = 20;
+        int offset = page * size;
 
-        return StationDto.builder()
-                .statId(station.getStatId())
-                .statNm(station.getStatNm())
-                .addr(station.getAddr())
-                .location(station.getLocation())
-                .lat(station.getLat())
-                .lng(station.getLng())
-                .useTime(station.getUseTime())
-                .bnm(station.getBnm())
-                .zcode(station.getZcode())
-                .zscode(station.getZscode())
-                .kind(station.getKind())
-                .parkingFree(station.getParkingFree())
-                .limitYn(station.getLimitYn())
-                .limitDetail(station.getLimitDetail())
-                .build();
+        List<StationEntity> entities = stationRepository.findStationsWithinRadiusWithPaging(
+                userLat, userLng, radius, offset, size);
+
+        return entities.stream()
+                .map(entity -> {
+                    // 1. 일단 기본 DTO로 변환
+                    StationDto dto = StationDto.fromEntity(entity, userLat, userLng);
+
+                    // 2. [수정 추가] 이 충전소의 충전기들을 다 불러와서 개수 세기
+                    List<com.simplecoding.chargerreservation.charger.entity.ChargerEntity> chargers =
+                            chargerRepository.findByStatId(entity.getStatId());
+
+                    // 3. [수정 추가] 전체 대수와 사용 가능 대수를 계산해서 DTO에 채우기
+                    dto.setTotalCount(chargers.size());
+                    long available = chargers.stream()
+                            .filter(c -> "2".equals(c.getStat())) // "2"가 충전가능 상태일 때
+                            .count();
+                    dto.setAvailableCount((int) available);
+
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 
+    /**
+     * [기능] 충전소 상세 정보 단건 조회
+     * - 특정 마커를 클릭했을 때 해당 충전소 1개의 상세 정보를 가져옵니다.
+     * - 테스트 코드에서 호출하는 핵심 메서드입니다.
+     */
+    @Transactional(readOnly = true)
+    public StationDto getStationDetail(String statId, Double userLat, Double userLng) {
+        // ID로 조회하고 없으면 에러 처리
+        StationEntity entity = stationRepository.findById(statId)
+                .orElseThrow(() -> new RuntimeException("해당 충전소를 찾을 수 없습니다. ID: " + statId));
 
+        // 엔티티를 DTO로 변환하여 반환
+        return StationDto.fromEntity(entity, userLat, userLng);
+    }
+
+    /**
+     * [기능] 충전소 통합 검색
+     * - 검색어(키워드)를 입력받아 충전소명이나 주소 등에서 일치하는 데이터를 찾습니다.
+     * - 좌표 기준이 아니므로 거리순 정렬보다는 매칭 결과 위주로 반환합니다.
+     */
     @Transactional(readOnly = true)
     public List<StationDto> searchStations(String keyword) {
-        if (keyword == null || keyword.trim().isEmpty()) {
-            return List.of();
-        }
+        if (keyword == null || keyword.trim().isEmpty()) return List.of();
 
-        // 1. Repository에서 엔티티 리스트 조회
         List<StationEntity> entities = stationRepository.findByIntegratedSearch(keyword.trim());
 
-        // 2. DTO에 이미 있는 [fromEntity] 메서드 사용!
         return entities.stream()
-                .map(StationDto::fromEntity) // ◀ StationDto에 있는 메서드 이름으로 호출
+                .map(StationDto::fromEntity)
                 .collect(Collectors.toList());
     }
 
@@ -239,9 +265,3 @@ public class StationService {
 
 }
 
-// StationService 클래스 내부 어디든 상관없지만, 보통 맨 아래에 둡니다.
-
-/**
- * [도움 메서드] Entity 객체를 DTO 객체로 변환합니다.
- * 이 메서드가 있어야 searchStations와 getStationDetail의 빨간 줄이 사라집니다.
- */

@@ -1,6 +1,7 @@
 package com.simplecoding.chargerreservation.charger.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.simplecoding.chargerreservation.charger.entity.ChargerEntity;
 import lombok.*;
 
 /**
@@ -51,4 +52,14 @@ public class ChargerDto {
     // DB 관리용 시간 (API 응답에는 없으므로 JsonProperty 생략)
     private String createdAt;
     private String updatedAt;
+
+    public static ChargerDto fromEntity(ChargerEntity entity) {
+        return ChargerDto.builder()
+                .statId(entity.getStatId())
+                .chargerId(entity.getChargerId())
+                .chargerType(entity.getChargerType())
+                .stat(entity.getStat())
+                .method(entity.getMethod())
+                .build();
+    }
 }
