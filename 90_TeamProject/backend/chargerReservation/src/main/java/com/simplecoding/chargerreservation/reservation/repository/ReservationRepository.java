@@ -33,5 +33,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             );
 
     Optional<Reservation> findByChargerIdAndStatusAndReservationPin(String chargerId, String status, String reservationPin);
+    List<Reservation> findByStatusAndEndTimeBefore(String status, LocalDateTime endTime);
 
 }

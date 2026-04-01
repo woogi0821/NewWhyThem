@@ -3,9 +3,11 @@ package com.simplecoding.chargerreservation.reservation.service;
 import com.simplecoding.chargerreservation.reservation.dto.ReservationDto;
 import com.simplecoding.chargerreservation.reservation.entity.Reservation;
 import com.simplecoding.chargerreservation.reservation.repository.ReservationRepository;
+import com.simplecoding.chargerreservation.websocket.ChargerSocketController;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -21,6 +23,7 @@ import java.util.List;
 public class ReservationService {
 
     private final ReservationRepository reservationRepository;
+    private final ChargerSocketController chargerSocketController;
 
     @Transactional
     public ReservationDto.Response createReservation(Long memberId, ReservationDto.Request req) {
@@ -54,6 +57,8 @@ public class ReservationService {
                 .build();
 
         Reservation savedReservation = reservationRepository.save(reservation);
+        chargerSocketController.pushStatus(savedReservation.getChargerId(), "RESERVED");
+        log.info("웹소켓 푸시 완료 - chargerId : {}, status : RESERVED", savedReservation.getChargerId());
 
         return ReservationDto.Response.builder()
                 .id(savedReservation.getId())
@@ -64,5 +69,26 @@ public class ReservationService {
                 .endTime(savedReservation.getEndTime())
                 .status(savedReservation.getStatus())
                 .build();
+    }
+
+    //1분마다 만료된 예약 자동처리 (방치된 CHARGING 상태의 안전망)
+    //해당 스케쥴이 필요한 이유 : 사용자가 충전종료 버튼을 누르지않고 이탈하는 케이스 대비
+    @Scheduled(fixedDelay = 60000)
+    @Transactional
+    public void expireOverdueReservations() {
+        LocalDateTime now = LocalDateTime.now();
+
+        //END_TIME이 지난 CHARGING 상태 예약만 정밀조회 함수(인덱스의 활용,서버 부하 최소화)
+        List<Reservation> overdueList = reservationRepository
+                .findByStatusAndEndTimeBefore("CHARGING", now);
+        if (overdueList.isEmpty()) return;
+        for (Reservation reservation : overdueList){
+            //endCharging()으로 상태변경 + actualEndTime 기록
+            reservation.endCharging("COMPLETED", now);
+            //키오스크 모킹화면에 AVAILABLE상태 푸시
+            chargerSocketController.pushStatus(reservation.getChargerId(),"AVAILABLE");
+            log.info("만료 예약 자동처리 - chargerId : {}, reservationId : {}",
+                    reservation.getChargerId(), reservation.getId());
+        }
     }
 }
