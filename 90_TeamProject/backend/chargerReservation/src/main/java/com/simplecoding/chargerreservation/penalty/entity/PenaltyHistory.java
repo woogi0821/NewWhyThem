@@ -20,9 +20,7 @@ public class PenaltyHistory extends BaseTimeEntity {
     private Long reservationId;
     private String carNumber;
     private String reason;
-
-    private Integer penaltyPoints; // 벌점
-    private Integer nudgeCount;    // 독촉 문자 발송 횟수
+    private int nudgeCount;    // 독촉 문자 발송 횟수
 
     // Enum을 적용한 상태값 (숫자나 문자보다 안전함)
     @Enumerated(EnumType.STRING)

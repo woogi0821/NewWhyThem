@@ -19,8 +19,9 @@ public class PenaltyController {
 //     리액트의 등록 버튼을 누르면 이쪽으로 데이터가 들어옵니다.
     @PostMapping
     public ResponseEntity<PenaltyResponseDto> createPenalty(@RequestBody PenaltyRequestDto requestDto) {
-        // 서비스의 로직(저장 + 문자발송 시뮬레이션)을 실행합니다.
-        PenaltyResponseDto response = penaltyService.createPenalty(requestDto);
+        // 서비스의 로직(저장 + 문자발송 시뮬레이션)을 실행
+        // 일단 기본값으로 1단계(충전완료 직후)를 보낸다고 가정
+        PenaltyResponseDto response = penaltyService.processPenaltyStep(requestDto, 1);
         return ResponseEntity.ok(response); // 성공하면 200 OK와 함께 결과 전송
     }
 //    2. 특정 회원의 패널티 내역 조회 (GET 방식)

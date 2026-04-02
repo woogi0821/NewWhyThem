@@ -19,7 +19,6 @@ public class PenaltyResponseDto {
     private String memberId;
     private String carNumber;
     private String reason;
-    private Integer penaltyPoints;
     private Integer nudgeCount;
     private PenaltyStatus status;
     private String notiSentYn;

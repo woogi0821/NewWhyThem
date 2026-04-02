@@ -15,7 +15,7 @@ export function Home() {
         onClose={() => setShow(true)} 
         title="알림창 테스트"
       >
-        <p>모달 테스트</p>
+        <p>로그인 알림</p>
         <button className="bg-blue-500 text-white p-2 mt-4" onClick={() => setShow(false)}>닫기</button>
       </Modal>
     </div>
