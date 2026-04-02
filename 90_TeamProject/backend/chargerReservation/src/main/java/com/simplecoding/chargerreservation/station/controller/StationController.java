@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
+@CrossOrigin(origins = "http://172.27.80.1:5501") // 모든 도메인에서의 접속을 허용 (테스트용)
 @Slf4j
 @RestController
 @RequestMapping("/api/stations")
@@ -19,20 +19,19 @@ public class StationController {
     private final StationService stationService;
 
     /**
-     * 1. 내 주변 충전소 마커 조회 (반경 3km)
-     * GET /api/stations/markers?lat=35.1485&lng=129.0637
+     * [지도 마커 조회] 주변 1.5km 내 최대 100개의 마커 정보를 반환합니다.
+     * GET /api/stations/markers?lat=35.1798&lng=129.0750
      */
     @GetMapping("/markers")
-    public ResponseEntity<List<MarkerDto>> getStationMarkers(
-            @RequestParam Double lat,
-            @RequestParam Double lng,
-            @RequestParam(defaultValue = "0") int page) { // ★ page 파라미터 추가 (기본값 0)
+    public ResponseEntity<List<MarkerDto>> getMarkers(
+            @RequestParam("lat") Double lat,
+            @RequestParam("lng") Double lng) {
 
-        log.info("📍 주변 충전소 조회 요청 - 위도: {}, 경도: {}, 페이지: {}", lat, lng, page);
+        log.info("🌐 [API] 마커 조회 요청 - 위도: {}, 경도: {}", lat, lng);
 
-        // 수정된 서비스 메서드 호출 (page 전달)
-        List<MarkerDto> markers = stationService.getStationMarkers(lat, lng, page);
+        List<MarkerDto> markers = stationService.getStationMarkers(lat, lng);
 
+        // 결과가 비어있어도 200 OK와 빈 리스트를 보내는 것이 클라이언트 통신에 더 안정적입니다.
         return ResponseEntity.ok(markers);
     }
 

@@ -1,7 +1,7 @@
 package com.simplecoding.chargerreservation.station.service;
 
-import com.simplecoding.chargerreservation.charger.dto.ChargerDto;
 import com.simplecoding.chargerreservation.charger.dto.MarkerDto;
+import com.simplecoding.chargerreservation.charger.entity.ChargerEntity;
 import com.simplecoding.chargerreservation.station.dto.StationDto;
 import com.simplecoding.chargerreservation.station.entity.StationEntity;
 import com.simplecoding.chargerreservation.station.repository.StationRepository;
@@ -40,19 +40,24 @@ public class StationService {
      * - 지도에는 많은 정보가 필요 없으므로 필수 좌표 정보(MarkerDto)만 반환하여 가볍게 유지합니다.
      */
     @Transactional(readOnly = true)
-    public List<MarkerDto> getStationMarkers(Double lat, Double lng, int page) {
+    public List<MarkerDto> getStationMarkers(Double lat, Double lng) { // ★ page 파라미터 제거 (항상 최신 100개)
         double radius = 1.5;
-        int size = 20;
-        int offset = page * size; // 페이지 번호에 따른 시작 위치 계산
+        int size = 100; // 최대 100개로 고정
+        int offset = 0; // 항상 1등부터 100등까지 가져옴
 
-        // DB 쿼리 실행: 특정 위치 기반 페이징 처리된 엔티티 리스트
+        // DB 쿼리 실행: (가까운 순 정렬은 Repository의 네이티브 쿼리에서 처리된다고 가정)
         List<StationEntity> stations = stationRepository.findStationsWithinRadiusWithPaging(
                 lat, lng, radius, offset, size);
 
-        log.info("▶ [PAGING] {}페이지 조회 - 마커 개수: {}개", page, stations.size());
+        log.info("📍 [MAP MARKER] 주변 1.5km 내 마커 조회 - 조회된 개수: {}개", stations.size());
 
         return stations.stream()
-                .map(s -> new MarkerDto(s.getStatId(), s.getLat(), s.getLng(), "1"))
+                .map(s -> new MarkerDto(
+                        s.getStatId(),
+                        s.getLat(),
+                        s.getLng(),
+                        "1" // 상상하시는 마커 타입이나 상태값
+                ))
                 .collect(Collectors.toList());
     }
 
@@ -62,33 +67,36 @@ public class StationService {
      * - 무한 스크롤이나 목록 페이징 UI에 사용됩니다.
      */
     @Transactional(readOnly = true)
-    public List<StationDto> getStationsWithDistancePaged(Double userLat, Double userLng, int page) {
-        double radius = 1.5;
-        int size = 20;
-        int offset = page * size;
+    public List<StationDto> getStationsWithDistancePaged(Double lat, Double lng, int page) {
+        // 1. 급속 기준을 상수로 선언 (메서드 밖 static으로 빼면 더 좋습니다)
+        Set<String> fastTypes = Set.of("01", "03", "04", "05", "06", "08");
+        Set<String> slowTypes = Set.of("02", "07");
 
-        List<StationEntity> entities = stationRepository.findStationsWithinRadiusWithPaging(
-                userLat, userLng, radius, offset, size);
-
-        return entities.stream()
+        return stationRepository.findStationsWithinRadiusWithPaging(lat, lng, 1.5, page * 20, 20)
+                .stream()
                 .map(entity -> {
-                    // 1. 일단 기본 DTO로 변환
-                    StationDto dto = StationDto.fromEntity(entity, userLat, userLng);
+                    StationDto dto = StationDto.fromEntity(entity, lat, lng);
+                    List<ChargerEntity> chargers = chargerRepository.findByStatId(entity.getStatId());
 
-                    // 2. [수정 추가] 이 충전소의 충전기들을 다 불러와서 개수 세기
-                    List<com.simplecoding.chargerreservation.charger.entity.ChargerEntity> chargers =
-                            chargerRepository.findByStatId(entity.getStatId());
+                    // 가용 대수 계산 (필터링 후 카운트)
+                    int available = (int) chargers.stream().filter(c -> "2".equals(c.getStat())).count();
+                    dto.setCounts(available, chargers.size());
 
-                    // 3. [수정 추가] 전체 대수와 사용 가능 대수를 계산해서 DTO에 채우기
-                    dto.setTotalCount(chargers.size());
-                    long available = chargers.stream()
-                            .filter(c -> "2".equals(c.getStat())) // "2"가 충전가능 상태일 때
-                            .count();
-                    dto.setAvailableCount((int) available);
+                    // 타입 판별 (Set의 중복 제거 특성을 이용)
+                    Set<String> presentTypes = chargers.stream()
+                            .map(ChargerEntity::getChargerType)
+                            .collect(Collectors.toSet());
 
+                    boolean hasFast = presentTypes.stream().anyMatch(fastTypes::contains);
+                    boolean hasSlow = presentTypes.stream().anyMatch(slowTypes::contains);
+
+                    // 최종 타입 결정 (삼항 연산자)
+                    String type = (chargers.isEmpty()) ? "정보없음" :
+                            (hasFast && hasSlow ? "급속/완속" : (hasFast ? "급속" : "완속"));
+
+                    dto.setChargerType(type);
                     return dto;
-                })
-                .collect(Collectors.toList());
+                }).collect(Collectors.toList());
     }
 
     /**

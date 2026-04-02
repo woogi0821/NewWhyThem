@@ -34,6 +34,7 @@ public class StationDto {
     private Double distance;        // [결과값] 내 위치로부터의 거리 (km)
     private List<ChargerDto> chargers;
     private String chargerType; // [추가] 급속, 완속, 또는 급속/완속 여부 표시용
+    private String statSummary; // "5 / 15" 형태로 미리 합쳐서 보낼 변수
 
     /**
      * Entity -> DTO 단순 변환
@@ -91,6 +92,13 @@ public class StationDto {
 
         // 소수점 둘째자리까지 반올림 (예: 1.25km)
         return Math.round(dist * 100.0) / 100.0;
+    }
+
+    // Service에서 계산 후 세팅해줄 메서드 하나 더 있으면 편해요
+    public void setCounts(int available, int total) {
+        this.availableCount = available;
+        this.totalCount = total;
+        this.statSummary = available + " / " + total;
     }
 
     /**
