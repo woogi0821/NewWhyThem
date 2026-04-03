@@ -1,51 +1,53 @@
-// 1. 필요한 도구 임포트 
 import React from "react";
 
-// 2. 주문서(Interface) 작성: 팀원들이 모달을 쓸 때 넘겨줄 값들
+// 팀 가이드에 맞춘 Interface 설계
 export interface IModalProps {
-  isOpen: boolean;       // 창을 열지(true) 닫을지(false) 결정
-  onClose: () => void;   // 닫기 버튼 눌렀을 때 실행할 함수
-  title: string;         // 모달 상단 제목
-  children: React.ReactNode; // 모달 몸통에 들어갈 내용 (HTML, 다른 컴포넌트 등)
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode; // 원칙 2: children으로 구멍 뚫기
+  variant?: "primary" | "danger"; // 5. variant 적용 (나중에 빨간색 모달이 필요하면 danger 추가 가능)
 }
 
-function Modal(props: IModalProps) {
-  // 3. 구조 분해 할당 
-  const { isOpen, onClose, title, children } = props;
-
-  // 4. 조기 리턴: 열림 상태가 아니면 아예 화면에 그리지 않음
+function Modal({ isOpen, onClose, title, children, variant = "primary" }: IModalProps) {
   if (!isOpen) return null;
 
   return (
-    <>
-      {/* 5. 배경 레이어 (Overlay): 화면 전체를 덮고 반투명하게 만듦 */}
+    // 배경: login-overlay 스타일 (블러 처리)
+    <div 
+      className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-[rgba(10,20,50,0.5)] backdrop-blur-md"
+      onClick={onClose}
+    >
+      {/* 모달 박스: .login-modal 스타일 (애니메이션과 그림자) */}
       <div 
-        className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center"
-        onClick={onClose} // 배경 클릭 시 닫히게 설정
+        className="bg-white rounded-[22px] p-8 w-full max-w-[420px] shadow-[0_24px_64px_rgba(0,0,0,0.2)] relative animate-[modalIn_0.28s_cubic-bezier(0.34,1.56,0.64,1)]"
+        onClick={(e) => e.stopPropagation()} 
       >
-        {/* 6. 모달 컨테이너 (흰색 박스): 실제 내용이 담기는 곳 */}
-        <div 
-          className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden"
-          onClick={(e) => e.stopPropagation()} // 박스 클릭 시에는 창이 닫히지 않게 방지
+        {/* 닫기 버튼: .login-modal-close 스타일 */}
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 w-[32px] h-[32px] rounded-lg bg-[#F5F8FF] text-[#64748B] hover:bg-[#FEE2E2] hover:text-[#EF4444] transition-all flex items-center justify-center font-bold"
         >
-          {/* 헤더 영역 */}
-          <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50">
-            <h2 className="text-xl font-bold text-gray-800">{title}</h2>
-            <button 
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-2xl font-semibold"
-            >
-              &times;
-            </button>
-          </div>
+          &times;
+        </button>
 
-          {/* 바디 영역: {children} 자리에 팀원이 넣고 싶은 내용이 들어감 */}
-          <div className="p-6">
-            {children}
-          </div>
+        {/* 헤더: .login-title 스타일 */}
+        <div className="mb-6">
+          <h2 className="text-[1.5rem] font-[900] text-[#0F172A] font-['Nunito'] mb-1">
+            {title}
+          </h2>
+          {/* variant가 primary일 때만 파란색 밑줄 */}
+          {variant === "primary" && (
+            <div className="h-1.5 w-10 bg-[#3B82F6] rounded-full"></div>
+          )}
+        </div>
+
+        {/* 바디: 무엇이든 들어올 수 있는 children */}
+        <div className="text-[#64748B] text-[0.95rem] leading-relaxed">
+          {children}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

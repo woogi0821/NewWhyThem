@@ -11,7 +11,7 @@ import AdminNoticePage from "../pages/admin/AdminNoticePage";
 import MainLayout from "../layout/basic/basicLayout";
 // import { SearchPage } from "../pages/SearchPage";
 import { ReservationPage } from "../pages/reservation/ReservationPage";
-import Home from "../pages/Home";
+import Home from "../components/common/Home";
 
 export const AppRouter = () => {
   return (
@@ -36,8 +36,12 @@ export const AppRouter = () => {
           {/* 예약 페이지 연결 🎯 */}
           <Route path="reservation" element={<ReservationPage />} />
         </Route>
-        {/* 모달 페이지 이동 */}
-      <Route path="/test-modal" element={<Home />} />
+    
+  {/* 메인 주소에서도 Home이 나오게 */}
+  <Route path="/" element={<Home />} />
+  {/* 테스트용 주소에서도 Home이 나오게 */}
+  <Route path="/test-modal" element={<Home />} />
+
         {/* ==========================================
                     2. 독립 영역 (키오스크 및 테스트/관리자)
                    ========================================== */}

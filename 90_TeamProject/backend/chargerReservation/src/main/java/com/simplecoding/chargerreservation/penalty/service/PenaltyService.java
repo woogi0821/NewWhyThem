@@ -18,9 +18,8 @@ public class PenaltyService {
 
     private final PenaltyRepository penaltyRepository;
 
-    /**
-     * 1. 패널티 등록 및 문자 발송 (단계별 처리)
-     */
+
+    //      1. 패널티 등록 및 문자 발송 (단계별 처리)
     @Transactional
     public PenaltyResponseDto processPenaltyStep(PenaltyRequestDto requestDto, int step) {
         PenaltyHistory penalty = new PenaltyHistory();
@@ -39,18 +38,16 @@ public class PenaltyService {
         return convertToResponseDto(savedPenalty);
     }
 
-    /**
-     * 2. [조회용] 특정 회원의 패널티 내역 전체 가져오기 (리액트 모달용)
-     */
+
+    //     2. [조회용] 특정 회원의 패널티 내역 전체 가져오기 (리액트 모달용)
     public List<PenaltyResponseDto> getMemberPenalties(String memberId) {
         return penaltyRepository.findByMemberId(memberId).stream()
                 .map(this::convertToResponseDto)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 3. [예약팀 협업용] 오늘 이 회원이 예약 가능한지 확인
-     */
+
+    //      3. [예약팀 협업용] 오늘 이 회원이 예약 가능한지 확인
     public boolean isRestrictedToday(String memberId) {
         // 오늘 00:00:00 ~ 23:59:59 범위 설정
         LocalDateTime start = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
@@ -60,9 +57,9 @@ public class PenaltyService {
         return penaltyRepository.existsByMemberIdAndNudgeCountAndInsertTimeBetween(memberId, 3, start, end);
     }
 
-    /**
-     * [보조] 단계별 메시지 생성 및 전송
-     */
+
+//     [보조] 단계별 메시지 생성 및 전송
+
     private void sendStepSms(PenaltyHistory penalty) {
         String message = "";
         switch (penalty.getNudgeCount()) {
@@ -80,9 +77,9 @@ public class PenaltyService {
         penalty.setNotiSentYn("Y");
     }
 
-    /**
-     * [보조] Entity를 ResponseDto로 변환 (Builder 사용)
-     */
+
+//     [보조] Entity를 ResponseDto로 변환 (Builder 사용)
+
     private PenaltyResponseDto convertToResponseDto(PenaltyHistory penalty) {
         return PenaltyResponseDto.builder()
                 .penaltyId(penalty.getPenaltyId())
