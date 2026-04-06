@@ -13,11 +13,40 @@ import java.util.Optional;
 public interface StationRepository extends JpaRepository<StationEntity, String> {
 
     /**
-     * 1. 하버사인(Haversine) 공식을 이용한 반경 검색 (수정됨)
-     * - Native Query 특성상 Entity로 바로 매핑되지 않는 'distance' 컬럼을 포함하기 위해
-     * - 인터페이스 기반 프로젝션이나 별도 처리가 필요할 수 있지만,
-     * - 일단 기본 Entity 구조를 유지하며 거리순 정렬과 필터링을 완벽히 수행합니다.
-     * - 페이징처리해서 한번에 찍히는 마커 줄이기
+     * 1. [마커 전용 조회] DB에서 혼잡도와 거리를 미리 계산해서 가져옴 (Interface Projection 활용)
+     * - 반환 타입이 MarkerProjection이므로 계산된 값이 유실되지 않음
+     */
+// StationRepository.java
+
+    @Query(value = "SELECT " +
+            "    s.STAT_ID AS statId, " +
+            "    s.STAT_NM AS statNm, " +
+            "    s.LAT AS lat, " +
+            "    s.LNG AS lng, " +
+            "    ROUND(6371 * acos(LEAST(1, GREATEST(-1, " +
+            "        sin(TRUNC(:lat, 8) * (acos(-1)/180)) * sin(TRUNC(s.LAT, 8) * (acos(-1)/180)) + " +
+            "        cos(TRUNC(:lat, 8) * (acos(-1)/180)) * cos(TRUNC(s.LAT, 8) * (acos(-1)/180)) * " +
+            "        cos((TRUNC(s.LNG, 8) * (acos(-1)/180)) - (TRUNC(:lng, 8) * (acos(-1)/180))) " +
+            "    ))), 2) AS distance, " +
+            "    (SELECT COUNT(*) FROM CHARGER c WHERE c.STAT_ID = s.STAT_ID AND c.STAT = '2') AS availableCount, " +
+            "    (SELECT COUNT(*) FROM CHARGER c WHERE c.STAT_ID = s.STAT_ID) AS totalCount, " +
+            "    (SELECT COUNT(*) FROM CHARGER c WHERE c.STAT_ID = s.STAT_ID AND c.STAT IN ('1', '4', '5')) AS brokenCount " +
+            "FROM STATION s " +
+            "WHERE ROUND(6371 * acos(LEAST(1, GREATEST(-1, " +
+            "        sin(TRUNC(:lat, 8) * (acos(-1)/180)) * sin(TRUNC(s.LAT, 8) * (acos(-1)/180)) + " +
+            "        cos(TRUNC(:lat, 8) * (acos(-1)/180)) * cos(TRUNC(s.LAT, 8) * (acos(-1)/180)) * " +
+            "        cos((TRUNC(s.LNG, 8) * (acos(-1)/180)) - (TRUNC(:lng, 8) * (acos(-1)/180))) " +
+            "    ))), 2) <= :radius " +
+            "ORDER BY distance ASC " +
+            "FETCH NEXT 100 ROWS ONLY",
+            nativeQuery = true)
+    List<MarkerProjection> findMarkersWithinRadius(
+            @Param("lat") Double lat,
+            @Param("lng") Double lng,
+            @Param("radius") Double radius
+    );
+    /**
+     * 2. [목록 전용 조회] 페이징 처리가 포함된 상세 정보 조회 (Entity 활용)
      */
     @Query(value = "SELECT * FROM ( " +
             "    SELECT s.*, " +
@@ -28,8 +57,8 @@ public interface StationRepository extends JpaRepository<StationEntity, String> 
             "    ))), 2) AS distance " +
             "    FROM STATION s " +
             ") t WHERE t.distance <= :radius " +
-            "ORDER BY t.distance ASC " + // 가까운 순 정렬
-            "OFFSET :offset ROWS FETCH NEXT :size ROWS ONLY", // 페이징 핵심
+            "ORDER BY t.distance ASC " +
+            "OFFSET :offset ROWS FETCH NEXT :size ROWS ONLY",
             nativeQuery = true)
     List<StationEntity> findStationsWithinRadiusWithPaging(
             @Param("lat") Double lat,
@@ -39,7 +68,7 @@ public interface StationRepository extends JpaRepository<StationEntity, String> 
             @Param("size") int size);
 
     /**
-     * 2. 통합 키워드 검색 (충전소명 OR 주소 OR 운영기관명)
+     * 3. 통합 키워드 검색
      */
     @Query("SELECT s FROM StationEntity s " +
             "WHERE s.statNm LIKE %:keyword% " +
@@ -48,23 +77,9 @@ public interface StationRepository extends JpaRepository<StationEntity, String> 
             "ORDER BY s.statNm ASC")
     List<StationEntity> findByIntegratedSearch(@Param("keyword") String keyword);
 
-    /**
-     * 3. 특정 충전소 ID로 데이터 조회
-     */
+    // 나머지 메서드들 (동일)
     Optional<StationEntity> findByStatId(String statId);
-
-    /**
-     * 4. 특정 지역 코드(zcode)로 조회
-     */
     List<StationEntity> findByZcode(String zcode);
-
-    /**
-     * 5. 운영기관명(bnm) 단독 검색
-     */
     List<StationEntity> findByBnmContaining(String bnm);
-
-    /**
-     * 6. 좌표 기반 중복 체크를 위한 메서드 (추가 권장)
-     */
     Optional<StationEntity> findByLatAndLng(Double lat, Double lng);
 }

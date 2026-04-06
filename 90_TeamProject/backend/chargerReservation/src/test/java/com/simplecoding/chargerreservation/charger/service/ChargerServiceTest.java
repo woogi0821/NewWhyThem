@@ -1,9 +1,6 @@
 package com.simplecoding.chargerreservation.charger.service;
 
-import com.simplecoding.chargerreservation.charger.dto.MarkerDto;
-import com.simplecoding.chargerreservation.charger.entity.ChargerEntity;
 import com.simplecoding.chargerreservation.charger.repository.ChargerRepository;
-import com.simplecoding.chargerreservation.station.entity.StationEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,8 +9,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.Rollback;
 import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 

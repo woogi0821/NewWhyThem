@@ -1,9 +1,10 @@
 package com.simplecoding.chargerreservation.station.service;
 
-import com.simplecoding.chargerreservation.charger.dto.MarkerDto;
+import com.simplecoding.chargerreservation.station.dto.MarkerDto;
 import com.simplecoding.chargerreservation.charger.entity.ChargerEntity;
 import com.simplecoding.chargerreservation.station.dto.StationDto;
 import com.simplecoding.chargerreservation.station.entity.StationEntity;
+import com.simplecoding.chargerreservation.station.repository.MarkerProjection;
 import com.simplecoding.chargerreservation.station.repository.StationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,31 +37,84 @@ public class StationService {
 
     /**
      * [기능] 지도 표시용 마커 데이터 조회 (최적화 버전)
-     * - 반경 3km 이내의 충전소를 20개씩 끊어서 가져옵니다.
+     * - 반경 3km 이내의 충전소를 100개씩 끊어서 가져옵니다.
      * - 지도에는 많은 정보가 필요 없으므로 필수 좌표 정보(MarkerDto)만 반환하여 가볍게 유지합니다.
      */
     @Transactional(readOnly = true)
-    public List<MarkerDto> getStationMarkers(Double lat, Double lng) { // ★ page 파라미터 제거 (항상 최신 100개)
+    public List<MarkerDto> getStationMarkers(Double lat, Double lng) {
         double radius = 1.5;
-        int size = 100; // 최대 100개로 고정
-        int offset = 0; // 항상 1등부터 100등까지 가져옴
+        // DB에서는 정렬을 위해 거리를 계산하지만, DTO(MarkerDto)에는 담지 않습니다.
+        List<MarkerProjection> projections = stationRepository.findMarkersWithinRadius(lat, lng, radius);
 
-        // DB 쿼리 실행: (가까운 순 정렬은 Repository의 네이티브 쿼리에서 처리된다고 가정)
-        List<StationEntity> stations = stationRepository.findStationsWithinRadiusWithPaging(
-                lat, lng, radius, offset, size);
+        return projections.stream()
+                .map(p -> {
+                    // 1. 기본 데이터 추출 (Null 방어)
+                    int total = p.getTotalCount() != null ? p.getTotalCount() : 0;
+                    int broken = p.getBrokenCount() != null ? p.getBrokenCount() : 0;
+                    int rawAvailable = p.getAvailableCount() != null ? p.getAvailableCount() : 0;
 
-        log.info("📍 [MAP MARKER] 주변 1.5km 내 마커 조회 - 조회된 개수: {}개", stations.size());
+                    // 2. [데이터 보정] 가용 대수는 (전체 - 고장)을 초과할 수 없음
+                    int realAvailable = rawAvailable;
+                    if (realAvailable + broken > total) {
+                        realAvailable = Math.max(0, total - broken);
+                    }
 
-        return stations.stream()
-                .map(s -> new MarkerDto(
-                        s.getStatId(),
-                        s.getLat(),
-                        s.getLng(),
-                        "1" // 상상하시는 마커 타입이나 상태값
-                ))
+                    // [중요] 색상 계산을 위한 분모 설정
+                    // 기존 activeTotal 대신 'total'을 사용하여 고장 대수까지 포함한 전체 비율을 계산합니다.
+                    double calcRate = 0.0;
+                    String color = "gray";
+                    String warning = "NONE";
+                    String occupancyText;
+
+                    // 3. 전체 고장(TOTAL)인 경우 최우선 처리 (Black)
+                    if (total > 0 && total == broken) {
+                        color = "black";
+                        warning = "TOTAL";
+                        occupancyText = "점검 중";
+                    }
+                    // 4. 가동 중인 기기가 하나라도 있는 경우
+                    else if (total > 0) {
+                        warning = (broken > 0) ? "PARTIAL" : "NONE";
+
+                        // ✅ [수정] 분모를 total로 변경하여 고장난 기기가 있으면 비율이 낮아지도록 함
+                        // (주)국제식품 예시: (1 / 2) * 100 = 50% -> 'amber' 당첨!
+                        calcRate = ((double) realAvailable / total) * 100;
+
+                        // 색상 결정 로직
+                        if (realAvailable == 0) {
+                            color = "gray";       // 만차 (사용 가능한 기기 없음)
+                        } else if (calcRate >= 70) {
+                            color = "green";      // 여유
+                        } else if (calcRate >= 30) {
+                            color = "amber";      // 보통 (수정된 로직에 의해 50%는 여기가 됨)
+                        } else {
+                            color = "red";        // 혼잡
+                        }
+
+                        // [3단계] 현황 텍스트 (거리는 완전히 제거됨)
+                        occupancyText = (broken > 0)
+                                ? String.format("%d / %d (고장 %d)", realAvailable, total, broken)
+                                : String.format("%d / %d", realAvailable, total);
+                    } else {
+                        color = "gray";
+                        occupancyText = "확인불가";
+                    }
+
+                    // 5. 최종 MarkerDto 생성
+                    return MarkerDto.builder()
+                            .statId(p.getStatId())
+                            .statNm(p.getStatNm())
+                            .lat(p.getLat())
+                            .lng(p.getLng())
+                            // .distance() 는 MarkerDto 필드에서 삭제되었으므로 넣지 않음
+                            .availabilityRate(calcRate)
+                            .markerColor(color)
+                            .warningLevel(warning)
+                            .occupancy(occupancyText)
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
-
     /**
      * [기능] 주변 충전소 목록 조회 (상세 정보 포함 리스트)
      * - 마커 조회와 비슷하지만, 충전소 이름, 주소 등 상세 정보를 담은 StationDto를 반환합니다.
@@ -68,33 +122,34 @@ public class StationService {
      */
     @Transactional(readOnly = true)
     public List<StationDto> getStationsWithDistancePaged(Double lat, Double lng, int page) {
-        // 1. 급속 기준을 상수로 선언 (메서드 밖 static으로 빼면 더 좋습니다)
         Set<String> fastTypes = Set.of("01", "03", "04", "05", "06", "08");
         Set<String> slowTypes = Set.of("02", "07");
+        Set<String> brokenStats = Set.of("1", "4", "5"); // 고장 상태 코드 정의
 
-        return stationRepository.findStationsWithinRadiusWithPaging(lat, lng, 1.5, page * 20, 20)
-                .stream()
+        List<StationEntity> entities = stationRepository.findStationsWithinRadiusWithPaging(lat, lng, 1.5, page * 20, 20);
+
+        return entities.stream()
                 .map(entity -> {
                     StationDto dto = StationDto.fromEntity(entity, lat, lng);
                     List<ChargerEntity> chargers = chargerRepository.findByStatId(entity.getStatId());
 
-                    // 가용 대수 계산 (필터링 후 카운트)
+                    // 1. 가용, 전체, 고장 대수 계산
+                    int total = chargers.size();
                     int available = (int) chargers.stream().filter(c -> "2".equals(c.getStat())).count();
-                    dto.setCounts(available, chargers.size());
+                    int broken = (int) chargers.stream().filter(c -> brokenStats.contains(c.getStat())).count();
 
-                    // 타입 판별 (Set의 중복 제거 특성을 이용)
-                    Set<String> presentTypes = chargers.stream()
-                            .map(ChargerEntity::getChargerType)
-                            .collect(Collectors.toSet());
+                    // 2. [핵심] StationDto에 새로 만든 통합 세팅 메서드 호출 (1, 2, 3단계 자동 처리)
+                    dto.setStatusInfo(available, total, broken);
 
-                    boolean hasFast = presentTypes.stream().anyMatch(fastTypes::contains);
-                    boolean hasSlow = presentTypes.stream().anyMatch(slowTypes::contains);
+                    // 3. 타입 판별 로직 (기존 유지)
+                    boolean hasFast = chargers.stream().anyMatch(c -> fastTypes.contains(c.getChargerType()));
+                    boolean hasSlow = chargers.stream().anyMatch(c -> slowTypes.contains(c.getChargerType()));
 
-                    // 최종 타입 결정 (삼항 연산자)
-                    String type = (chargers.isEmpty()) ? "정보없음" :
-                            (hasFast && hasSlow ? "급속/완속" : (hasFast ? "급속" : "완속"));
+                    if (chargers.isEmpty()) dto.setChargerType("정보없음");
+                    else if (hasFast && hasSlow) dto.setChargerType("급속/완속");
+                    else if (hasFast) dto.setChargerType("급속");
+                    else dto.setChargerType("완속");
 
-                    dto.setChargerType(type);
                     return dto;
                 }).collect(Collectors.toList());
     }
@@ -147,7 +202,7 @@ public class StationService {
         List<JSONObject> buffer = new ArrayList<>();
 
         int pageNo = 1;
-        int numOfRows = 5000;
+        int numOfRows = 9999;
         boolean hasMore = true;
 
         log.info("▶▶▶ [STATION] 수집 시작");
@@ -188,7 +243,7 @@ public class StationService {
 
                 log.info("✔ {}페이지 완료 / 현재 누적 유니크 충전소: {}", pageNo, statIdSet.size());
 
-                if (buffer.size() >= 5000) {
+                if (buffer.size() >= 10000) {
                     executeBatchMerge(buffer);
                     buffer.clear();
                 }

@@ -4,9 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.simplecoding.chargerreservation.charger.entity.ChargerEntity;
 import lombok.*;
 
-/**
- * 공공 API 응답 필드와 DB 컬럼 사이를 이어주는 DTO
- */
 @Getter
 @Setter
 @ToString
@@ -16,50 +13,55 @@ import lombok.*;
 public class ChargerDto {
 
     @JsonProperty("statId")
-    private String statId;      // STAT_ID
+    private String statId;
 
-    @JsonProperty("chgerId")    // API: chgerId -> DB: CHARGER_ID
+    @JsonProperty("chgerId")
     private String chargerId;
 
-    @JsonProperty("chgerType")  // API: chgerType -> DB: CHARGER_TYPE
+    @JsonProperty("chgerType")
     private String chargerType;
 
     @JsonProperty("stat")
-    private String stat;        // STAT (2:사용가능, 3:충전중 등)
+    private String stat;
 
     @JsonProperty("statUpdDt")
-    private String statUpdDt;   // STAT_UPD_DT (상태갱신일시)
+    private String statUpdDt;
 
     @JsonProperty("output")
-    private Integer output;     // OUTPUT (충전용량)
+    private Integer output;
 
     @JsonProperty("method")
-    private String method;      // METHOD (충전방식)
-
-    // --- 새로 추가된 실시간 상태 필드 시작 ---
+    private String method;
 
     @JsonProperty("lastTsdt")
-    private String lastTsdt;    // LAST_TSDT (마지막 충전 시작일시)
+    private String lastTsdt;
 
     @JsonProperty("lastTedt")
-    private String lastTedt;    // LAST_TEDT (마지막 충전 종료일시)
+    private String lastTedt;
 
     @JsonProperty("nowTsdt")
-    private String nowTsdt;     // NOW_TSDT (현재 충전 시작일시)
+    private String nowTsdt;
 
-    // --- 새로 추가된 실시간 상태 필드 끝 ---
-
-    // DB 관리용 시간 (API 응답에는 없으므로 JsonProperty 생략)
     private String createdAt;
     private String updatedAt;
 
+    /**
+     * Entity -> DTO 변환
+     * 누락되었던 실시간 상태 필드들을 추가했습니다.
+     */
     public static ChargerDto fromEntity(ChargerEntity entity) {
+        if (entity == null) return null;
         return ChargerDto.builder()
                 .statId(entity.getStatId())
                 .chargerId(entity.getChargerId())
                 .chargerType(entity.getChargerType())
                 .stat(entity.getStat())
+                .statUpdDt(entity.getStatUpdDt()) // 추가
+                .output(entity.getOutput())       // 추가
                 .method(entity.getMethod())
+                .lastTsdt(entity.getLastTsdt())   // 추가
+                .lastTedt(entity.getLastTedt())   // 추가
+                .nowTsdt(entity.getNowTsdt())     // 추가
                 .build();
     }
 }

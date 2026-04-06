@@ -29,12 +29,17 @@ public class StationDto {
     private String limitYn;      // 13. 이용 제한 여부
     private String limitDetail;  // 14. 제한 사유 상세
 
-    private Integer availableCount;
-    private Integer totalCount;
-    private Double distance;        // [결과값] 내 위치로부터의 거리 (km)
+    private Integer availableCount; // 사용 가능 대수
+    private Integer totalCount;     // 전체 대수
+    private Integer brokenCount;    // [추가] 고장 대수
+    private Double distance;        // 내 위치로부터의 거리 (km)
     private List<ChargerDto> chargers;
-    private String chargerType; // [추가] 급속, 완속, 또는 급속/완속 여부 표시용
-    private String statSummary; // "5 / 15" 형태로 미리 합쳐서 보낼 변수
+    private String chargerType;
+    private String statSummary;     // [3단계] 하단 텍스트 (예: 2/4 (고장 1))
+
+    private String markerColor;     // [1단계] 마커 색상 (green, amber, red, gray, black)
+    private String warningLevel;    // [2단계] 주의 표시 (NONE, PARTIAL, TOTAL)
+    private String occupancy;
 
     /**
      * Entity -> DTO 단순 변환
@@ -59,51 +64,88 @@ public class StationDto {
     }
 
     /**
-     * Entity -> DTO 변환 + 거리 계산 로직 포함
+     * Entity -> DTO 변환 + 거리 계산
      */
     public static StationDto fromEntity(StationEntity entity, Double userLat, Double userLng) {
         StationDto dto = fromEntity(entity);
-
         if (userLat != null && userLng != null && entity.getLat() != null && entity.getLng() != null) {
             double dist = calculateDistance(userLat, userLng, entity.getLat(), entity.getLng());
             dto.setDistance(dist);
         }
-
         return dto;
     }
 
     /**
-     * 하버사인 공식 (Haversine Formula) - km 단위 거리 계산
-     * 오라클 쿼리와의 오차를 최소화하기 위해 표준 공식을 사용합니다.
+     * [핵심] 1, 2, 3단계를 한 번에 계산하여 세팅하는 메서드
+     * Service 단에서 호출하여 사용하세요.
+     */
+    public void setStatusInfo(int available, int total, int broken) {
+        this.availableCount = available;
+        this.totalCount = total;
+        this.brokenCount = broken;
+
+        // 1. [데이터 보정] 실제 가용 대수는 (전체 - 고장)을 초과할 수 없음
+        // 예: 4대 중 1대 고장인데 가용이 4라고 오면, 3으로 깎아줍니다.
+        int realAvailable = available;
+        if (realAvailable + broken > total) {
+            realAvailable = Math.max(0, total - broken);
+        }
+
+        // 보정된 값을 다시 필드에 저장 (정확한 화면 출력을 위해)
+        this.availableCount = realAvailable;
+
+        // 2. 가동 가능한 기기 대수 (색상 비율 계산용 분모)
+        int activeTotal = Math.max(0, total - broken);
+
+        // 3. 전체 고장 여부 판단 (TOTAL)
+        // 1대 중 1대 고장이거나, 운영 가능한 기기가 0대인 경우
+        if (total > 0 && (total == broken || activeTotal == 0)) {
+            this.markerColor = "black";
+            this.warningLevel = "TOTAL";
+            this.statSummary = "점검 중";
+        }
+        // 4. 일부라도 가동 중인 기계가 있는 경우
+        else if (total > 0) {
+            this.warningLevel = (broken > 0) ? "PARTIAL" : "NONE";
+
+            // [주의] 색상 판별 비율은 '실제 운영 가능한 대수' 대비 '가용 대수'로 계산해야 정확합니다.
+            double rate = (activeTotal > 0) ? ((double) realAvailable / activeTotal) * 100 : 0;
+
+            // 1단계: 마커 색상 결정
+            if (realAvailable == 0) this.markerColor = "gray";       // 만차
+            else if (rate >= 70) this.markerColor = "green";    // 여유
+            else if (rate >= 30) this.markerColor = "amber";    // 보통
+            else this.markerColor = "red";                      // 혼잡
+
+            // [핵심] 3단계: 텍스트 구성 (질문자님 요청 방식: 3/4 (고장 1))
+            // 분모를 activeTotal이 아닌 'total'로 사용합니다.
+            this.statSummary = (broken > 0)
+                    ? String.format("%d / %d (고장 %d)", realAvailable, total, broken)
+                    : String.format("%d / %d", realAvailable, total);
+        }
+        // 5. 데이터 확인 불가
+        else {
+            this.markerColor = "gray";
+            this.statSummary = "확인불가";
+            this.warningLevel = "NONE";
+        }
+    }
+    /**
+     * 거리 계산 (Haversine Formula)
      */
     private static double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
         if (lat1 == lat2 && lon1 == lon2) return 0.0;
-
-        double earthRadius = 6371.0; // 지구 반지름 (km)
+        double earthRadius = 6371.0;
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);
-
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
                 Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
                         Math.sin(dLon / 2) * Math.sin(dLon / 2);
-
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         double dist = earthRadius * c;
-
-        // 소수점 둘째자리까지 반올림 (예: 1.25km)
         return Math.round(dist * 100.0) / 100.0;
     }
 
-    // Service에서 계산 후 세팅해줄 메서드 하나 더 있으면 편해요
-    public void setCounts(int available, int total) {
-        this.availableCount = available;
-        this.totalCount = total;
-        this.statSummary = available + " / " + total;
-    }
-
-    /**
-     * DTO -> Entity 변환
-     */
     public StationEntity toEntity() {
         return StationEntity.builder()
                 .statId(this.statId)

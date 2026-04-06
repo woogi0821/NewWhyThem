@@ -1,6 +1,6 @@
 package com.simplecoding.chargerreservation.station.controller;
 
-import com.simplecoding.chargerreservation.charger.dto.MarkerDto;
+import com.simplecoding.chargerreservation.station.dto.MarkerDto;
 import com.simplecoding.chargerreservation.station.dto.StationDto;
 import com.simplecoding.chargerreservation.station.service.StationService;
 import lombok.RequiredArgsConstructor;
@@ -24,15 +24,34 @@ public class StationController {
      */
     @GetMapping("/markers")
     public ResponseEntity<List<MarkerDto>> getMarkers(
-            @RequestParam("lat") Double lat,
-            @RequestParam("lng") Double lng) {
+            @RequestParam(value = "lat", required = false) Double lat,
+            @RequestParam(value = "lng", required = false) Double lng) {
 
-        log.info("🌐 [API] 마커 조회 요청 - 위도: {}, 경도: {}", lat, lng);
+        // 1. 요청 파라미터 로깅
+        log.info("🌐 [API] 지도 마커 조회 요청 - 기준 위도: {}, 경도: {}", lat, lng);
 
-        List<MarkerDto> markers = stationService.getStationMarkers(lat, lng);
+        // 2. 필수 파라미터 검증 (방어 코드)
+        if (lat == null || lng == null) {
+            log.warn("⚠️ [API] 요청 위경도 값이 누락되었습니다. (lat: {}, lng: {})", lat, lng);
+            return ResponseEntity.badRequest().build();
+        }
 
-        // 결과가 비어있어도 200 OK와 빈 리스트를 보내는 것이 클라이언트 통신에 더 안정적입니다.
-        return ResponseEntity.ok(markers);
+        try {
+            // 3. 서비스 호출
+            // (주의: MarkerDto에는 이제 distance가 포함되지 않으며,
+            //  비율 계산 시 분모를 total로 사용하는 로직이 반영되어 있습니다.)
+            List<MarkerDto> markers = stationService.getStationMarkers(lat, lng);
+
+            // 4. 응답 결과 로깅
+            log.info("✅ [API] 마커 조회 완료 - 반환 건수: {}건 (거리 정보 제외)", markers.size());
+
+            // 5. 결과 반환
+            return ResponseEntity.ok(markers);
+
+        } catch (Exception e) {
+            log.error("❌ [API] 마커 조회 중 예외 발생: ", e); // 에러 스택트레이스까지 찍히도록 수정
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     /**

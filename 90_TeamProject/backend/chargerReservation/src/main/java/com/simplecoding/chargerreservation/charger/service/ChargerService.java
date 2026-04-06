@@ -35,7 +35,7 @@ public class ChargerService {
 
         RestTemplate restTemplate = new RestTemplate();
         int pageNo = 1;
-        int numOfRows = 5000;
+        int numOfRows = 8000;
         boolean hasMore = true;
         int totalUpdated = 0;
 
@@ -45,7 +45,7 @@ public class ChargerService {
                         .queryParam("serviceKey", serviceKey)
                         .queryParam("pageNo", pageNo)
                         .queryParam("numOfRows", numOfRows)
-                        .queryParam("period", 10)
+                        .queryParam("period", 20)
                         .queryParam("dataType", "JSON")
                         .build(true).toUri();
 
