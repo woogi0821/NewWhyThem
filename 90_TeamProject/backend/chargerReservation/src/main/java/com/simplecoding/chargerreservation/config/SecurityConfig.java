@@ -2,7 +2,9 @@ package com.simplecoding.chargerreservation.config;
 
 import com.simplecoding.chargerreservation.common.jwt.JwtAuthenticationFilter;
 import com.simplecoding.chargerreservation.common.jwt.JwtTokenProvider;
+import com.simplecoding.chargerreservation.common.jwt.OAuth2SuccessHandler;
 import com.simplecoding.chargerreservation.member.service.CustomOAuth2UserService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -19,6 +21,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
     private JwtTokenProvider jwtTokenProvider;
     private final CustomOAuth2UserService customOAuth2UserService; // 소셜 정보 처리 서비스

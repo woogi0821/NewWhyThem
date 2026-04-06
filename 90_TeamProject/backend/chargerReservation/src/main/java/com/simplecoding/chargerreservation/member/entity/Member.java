@@ -22,30 +22,28 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(of = "memberId", callSuper = false)
 public class Member extends BaseTimeEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE,
-        generator = "SQ_MEMBER_JPA")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "SQ_MEMBER_JPA")
     private Long memberId;
 
     @Column(nullable = false, unique = true)
     private String loginId;
-    // 소셜 로그인 시 비밀번호가 비어있을 수 있으므로 nullable을 true로 변경 (기본값)
     @Column(nullable = true)
-    private	String loginPw;
-
+    private	String loginPw;     // 소셜 로그인 시 비밀번호x -> nullable을 true로 변경 (기본값)
+    @Column(nullable = false, unique = true)
+    private	String email;
+    @Column(nullable = false)
     private	String name;
+    @Column(nullable = false)
     private	String phone;
 
     @Builder.Default
-    @Column(nullable = false)
-    private	String status = "ACTIVE";       // ACTIVE(기본값), INACTIVE 등
+    private	String status = "ACTIVE";
 
     @Builder.Default
-    @Column(nullable = false)
-    private	String memberGrade = "USER";   // BASIC, ADMIN 등
+    private	String memberGrade = "N";
 
     // 소셜 로그인을 구분하기 위한 필드 (LOCAL, KAKAO, GOOGLE 등)
     @Builder.Default
-    @Column(nullable = false)
     private	String provider = "LOCAL";
     private	String providerId;
 
@@ -54,11 +52,9 @@ public class Member extends BaseTimeEntity {
     private	LocalDateTime suspendedUntil;
 
     // 소셜 로그인 사용자 정보 업데이트 메서드(더티체킹용)
-    public Member updateSocialInfo(String name, String phone) {
+    public Member updateSocialInfo(String name) {
         this.name = name;
-        if (phone != null) {
-            this.phone = phone;
-        }
+
         return this;
     }
 
