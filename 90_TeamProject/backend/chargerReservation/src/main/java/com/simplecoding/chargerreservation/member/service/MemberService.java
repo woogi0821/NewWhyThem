@@ -26,20 +26,9 @@ public class MemberService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
 
-    /**
-     * 공통 모듈: 현재 로그인한 유저 엔티티 가져오기
-     * 사용 방법: Member writer = memberService.getCurrentMember();
-     */
-    public Member getCurrentMember() {
-        String currentId = SecurityUtil.getCurrentLoginId();
-
-        return memberRepository.findByLoginId(currentId)
-            .orElseThrow(() -> new RuntimeException("로그인한 사용자 정보를 찾을 수 없습니다."));
-    }
-
-    /**
-     * 회원가입
-     */
+    /**==========================================
+     * 회원 관리 (회원가입)
+     ========================================== */
     public Long join(MemberDto dto) {
         validateDuplicateMember(dto.getLoginId());          // 아이디 중복확인
 
@@ -57,16 +46,9 @@ public class MemberService {
         return memberRepository.save(member).getMemberId();
     }
 
-    //  아이디 중복검증 함수
-    private void validateDuplicateMember(String loginId) {
-        if (memberRepository.findByLoginId(loginId).isPresent()) {
-            throw new IllegalStateException("이미 존재하는 아이디입니다.");
-        }
-    }
-
-    /**
-     * 로그인
-     */
+    /**==========================================
+     * 로그인 인증 및 보안 (Auth)
+     ========================================== */
     public TokenDto login(String loginId, String password, String userAgent, String clientIp) {
         Member member = memberRepository.findByLoginId(loginId)
             .orElseThrow(() -> new RuntimeException("아이디 또는 비밀번호가 일치하지 않습니다."));
@@ -97,21 +79,7 @@ public class MemberService {
             .build();
     }
 
-    /**
-     * 로그아웃: DB에서 리프레시 토큰을 삭제하여 재발급을 막음
-     */
-    @Transactional
-    public void logout(String loginId) {
-        Member member = memberRepository.findByLoginId(loginId)
-            .orElseThrow(() -> new IllegalArgumentException("해당 회원이 존재하지 않습니다."));
-
-        // DB에서 해당 멤버의 토큰 삭제
-        memberTokenRepository.deleteByMember(member);
-    }
-
-    /**
-     * 토큰 재발급: 유효한 RefreshToken을 받아서 새로운 AccessToken을 생성
-     */
+    // 토큰 재발급: 유효한 RefreshToken을 받아서 새로운 AccessToken을 생성
     @Transactional
     public TokenDto refreshAccessToken(String refreshToken) {
         // 전달받은 RefreshToken이 유효한지 체크 (유효기간 등)
@@ -138,6 +106,34 @@ public class MemberService {
             .accessToken(newAt)
             .refreshToken(newRt)
             .build();
+    }
+
+    // 로그아웃: DB에서 리프레시 토큰을 삭제하여 재발급을 막음
+    @Transactional
+    public void logout(String loginId) {
+        Member member = memberRepository.findByLoginId(loginId)
+            .orElseThrow(() -> new IllegalArgumentException("해당 회원이 존재하지 않습니다."));
+
+        // DB에서 해당 멤버의 토큰 삭제
+        memberTokenRepository.deleteByMember(member);
+    }
+
+    /**==========================================
+     * 공통 모듈: 현재 로그인한 유저 엔티티 가져오기
+     * 사용 방법: Member writer = memberService.getCurrentMember();
+     ==========================================*/
+    public Member getCurrentMember() {
+        String currentId = SecurityUtil.getCurrentLoginId();
+
+        return memberRepository.findByLoginId(currentId)
+            .orElseThrow(() -> new RuntimeException("로그인한 사용자 정보를 찾을 수 없습니다."));
+    }
+
+    //  아이디 중복검증 함수
+    private void validateDuplicateMember(String loginId) {
+        if (memberRepository.findByLoginId(loginId).isPresent()) {
+            throw new IllegalStateException("이미 존재하는 아이디입니다.");
+        }
     }
 
 }
