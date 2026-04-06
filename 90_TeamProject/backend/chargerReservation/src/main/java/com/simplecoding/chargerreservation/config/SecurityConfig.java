@@ -1,5 +1,8 @@
-package com.simplecoding.chargerreservation.common;
+package com.simplecoding.chargerreservation.config;
 
+import com.simplecoding.chargerreservation.common.jwt.JwtAuthenticationFilter;
+import com.simplecoding.chargerreservation.common.jwt.JwtTokenProvider;
+import com.simplecoding.chargerreservation.member.service.CustomOAuth2UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -18,6 +21,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableWebSecurity
 public class SecurityConfig {
     private JwtTokenProvider jwtTokenProvider;
+    private final CustomOAuth2UserService customOAuth2UserService; // 소셜 정보 처리 서비스
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;       // 성공 시 JWT 발급 핸들러
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -45,7 +50,11 @@ public class SecurityConfig {
                 .requestMatchers("/").permitAll()
                 .anyRequest().authenticated() // 그 외 모든 요청은 토큰이 있어야 함
             )
-
+            // 소셜 로그인 설정
+            .oauth2Login(oauth2 -> oauth2
+                .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService)) // 소셜 서비스 연결
+                .successHandler(oAuth2SuccessHandler) // 인증 성공 시 실행될 로직
+            )
             // 인증/인가 예외 처리 (가짜 토큰, 토큰 없음 등)
             .exceptionHandling(exception -> exception
                 .authenticationEntryPoint((request, response, authException) -> {

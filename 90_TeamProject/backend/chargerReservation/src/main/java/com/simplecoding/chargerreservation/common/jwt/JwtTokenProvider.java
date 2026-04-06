@@ -1,8 +1,7 @@
-package com.simplecoding.chargerreservation.common;
+package com.simplecoding.chargerreservation.common.jwt;
 
 import com.simplecoding.chargerreservation.member.entity.Member;
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,6 +13,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Arrays;
 import java.util.Collection;
@@ -29,17 +29,19 @@ public class JwtTokenProvider {
 
     // 설정 파일(yml/properties)에서 값을 읽어와서 초기화
     public JwtTokenProvider(
-        @Value("${jwt.secret}") String secretKey,
-        @Value("${jwt.access-token-validity-in-seconds}") long accessTokenValidityInSeconds,
-        @Value("${jwt.refresh-token-validity-in-seconds}") long refreshTokenValidityInSeconds) {
+        @Value("${jwt.secret-key}") String secretKey,
+        @Value("${jwt.access-token-validity-in-milliseconds}") long accessTokenValidity,
+        @Value("${jwt.refresh-token-validity-in-milliseconds}") long refreshTokenValidity) {
 
         // 시크릿 키를 Byte 배열로 변환 후 HMAC SHA 알고리즘에 맞는 Key 객체로 생성
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+//        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+//        this.key = Keys.hmacShaKeyFor(keyBytes);
+        byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
         this.key = Keys.hmacShaKeyFor(keyBytes);
 
         // 단위를 밀리초(ms)로 변환해서 저장
-        this.accessTokenValidityInMilliseconds = accessTokenValidityInSeconds * 1000;
-        this.refreshTokenValidityInMilliseconds = refreshTokenValidityInSeconds * 1000;
+        this.accessTokenValidityInMilliseconds = accessTokenValidity * 1000;
+        this.refreshTokenValidityInMilliseconds = refreshTokenValidity * 1000;
     }
 
     // [핵심] Access Token 생성
@@ -90,18 +92,22 @@ public class JwtTokenProvider {
         // 토큰 복호화
         Claims claims = parseClaims(accessToken);
 
-        if (claims.get("role") == null) {
+        Object roleClaim = claims.get("role");
+        if (roleClaim == null) {
             throw new RuntimeException("권한 정보가 없는 토큰입니다.");
         }
 
         // 클레임에서 권한 정보 가져오기
         Collection<? extends GrantedAuthority> authorities =
-            Arrays.stream(claims.get("role").toString().split(","))
+            Arrays.stream(roleClaim.toString().replace("[", "").replace("]", "").split(","))
+                .map(String::trim) // 공백 제거
+                .filter(role -> !role.isEmpty())
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
 
-        // UserDetails 객체를 만들어서 Authentication 리턴
+        // UserDetails 객체 객체 생성
         UserDetails principal = new User(claims.getSubject(), "", authorities);
+
         return new UsernamePasswordAuthenticationToken(principal, "", authorities);
     }
 
