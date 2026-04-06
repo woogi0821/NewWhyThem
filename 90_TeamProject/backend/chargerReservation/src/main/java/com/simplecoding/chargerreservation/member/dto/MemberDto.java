@@ -10,12 +10,13 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString
+@ToString(exclude = "loginPw")
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MemberDto {
     private Long memberId;
     private String loginId;
     private	String loginPw;
+    private	String email;
     private	String name;
     private	String phone;
     private	String status;

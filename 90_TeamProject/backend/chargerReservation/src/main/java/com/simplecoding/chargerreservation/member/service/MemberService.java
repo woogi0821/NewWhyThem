@@ -1,11 +1,13 @@
 package com.simplecoding.chargerreservation.member.service;
 
-import com.simplecoding.chargerreservation.common.JwtTokenProvider;
+import com.simplecoding.chargerreservation.common.jwt.JwtTokenProvider;
 import com.simplecoding.chargerreservation.common.SecurityUtil;
 import com.simplecoding.chargerreservation.member.dto.MemberDto;
 import com.simplecoding.chargerreservation.member.dto.TokenDto;
+import com.simplecoding.chargerreservation.member.entity.EmailVerification;
 import com.simplecoding.chargerreservation.member.entity.Member;
 import com.simplecoding.chargerreservation.member.entity.MemberToken;
+import com.simplecoding.chargerreservation.member.repository.EmailVerificationRepository;
 import com.simplecoding.chargerreservation.member.repository.MemberRepository;
 import com.simplecoding.chargerreservation.member.repository.MemberTokenRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ import java.time.LocalDateTime;
 public class MemberService {
     private final MemberRepository memberRepository;
     private final MemberTokenRepository memberTokenRepository;
+    private final EmailVerificationRepository emailVerificationRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
 
@@ -30,21 +33,37 @@ public class MemberService {
      * 회원 관리 (회원가입)
      ========================================== */
     public Long join(MemberDto dto) {
-        validateDuplicateMember(dto.getLoginId());          // 아이디 중복확인
+        // 아이디 및 이메일 중복확인
+        validateDuplicateMember(dto.getLoginId());
+        validateDuplicateEmail(dto.getEmail());
+
+        // 이메일 인증 여부 확인
+        EmailVerification verification = emailVerificationRepository.findById(dto.getEmail())
+            .orElseThrow(() -> new IllegalArgumentException("해당 이메일에 대한 인증 정보가 존재하지 않습니다."));
+
+        if (!"Y".equals(verification.getIsVerified())) {
+            throw new IllegalStateException("이메일 인증이 완료되지 않았습니다. 인증을 먼저 진행해주세요.");
+        }
 
         // 엔티티 생성 및 비밀번호 암호화
         Member member = Member.builder()
             .loginId(dto.getLoginId())
             .loginPw(passwordEncoder.encode(dto.getLoginPw()))
+            .email(dto.getEmail())
             .name(dto.getName())
             .phone(dto.getPhone())
-            .status("ACTIVE")
-            .memberGrade("N")
-            .provider("LOCAL")
+//            .status("ACTIVE")
+//            .memberGrade("N")
+//            .provider("LOCAL")
             .build();
 
-        return memberRepository.save(member).getMemberId();
+        // 저장 및 인증 데이터 삭제
+        Member savedMember = memberRepository.save(member);
+        emailVerificationRepository.delete(verification);
+
+        return savedMember.getMemberId();
     }
+
 
     /**==========================================
      * 로그인 인증 및 보안 (Auth)
@@ -119,9 +138,10 @@ public class MemberService {
     }
 
     /**==========================================
-     * 공통 모듈: 현재 로그인한 유저 엔티티 가져오기
-     * 사용 방법: Member writer = memberService.getCurrentMember();
+     * 공통 모듈
      ==========================================*/
+    // 현재 로그인 한 유저 엔티티 가져오기
+    // 사용 방법: Member writer = memberService.getCurrentMember();
     public Member getCurrentMember() {
         String currentId = SecurityUtil.getCurrentLoginId();
 
@@ -129,11 +149,18 @@ public class MemberService {
             .orElseThrow(() -> new RuntimeException("로그인한 사용자 정보를 찾을 수 없습니다."));
     }
 
-    //  아이디 중복검증 함수
+    //  아이디 중복 검증 함수
     private void validateDuplicateMember(String loginId) {
         if (memberRepository.findByLoginId(loginId).isPresent()) {
             throw new IllegalStateException("이미 존재하는 아이디입니다.");
         }
     }
+    // 이메일 중복 검증 함수
+    private void validateDuplicateEmail(String email) {
+        if (memberRepository.findByEmail(email).isPresent()) {
+            throw new IllegalStateException("이미 가입된 이메일입니다.");
+        }
+    }
+
 
 }
