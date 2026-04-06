@@ -22,7 +22,11 @@ public class OAuth2Attributes {
         if ("naver".equals(registrationId)) {
             return ofNaver("id", attributes);
         }
-        return ofKakao("id", attributes);
+        if ("kakao".equals(registrationId)) {
+            return ofKakao("id", attributes); // 카카오는 id가 최상위에 있음
+        }
+
+        return ofKakao(userNameAttributeName, attributes);
     }
 
     private static OAuth2Attributes ofKakao(String userNameAttributeName, Map<String, Object> attributes) {
@@ -41,7 +45,7 @@ public class OAuth2Attributes {
     }
 
     private static OAuth2Attributes ofNaver(String userNameAttributeName, Map<String, Object> attributes) {
-        // 네이버는 모든 데이터가 response라는 키로 감싸져 있음
+        // 네이버: 모든 데이터가 response라는 키로 감싸져 있음
         Map<String, Object> response = (Map<String, Object>) attributes.get("response");
 
         return OAuth2Attributes.builder()
@@ -65,8 +69,8 @@ public class OAuth2Attributes {
             .email(email)
             .provider(provider)
             .providerId(providerId)
-            .status("ACTIVE")
-            .memberGrade("N")
+//            .status("ACTIVE")
+//            .memberGrade("N")
             .build();
     }
 
