@@ -44,6 +44,9 @@ public class Reservation extends BaseTimeEntity {
     @Column(name = "STATUS", nullable = false, length = 20)
     private String status;
 
+    @Column(name = "IS_ALERT_SENT", nullable = false, length = 1)
+    private String isAlertSent = "N"; // 기본값은 'N' (아직 안 보냄)
+
     @Version
     @Column(name = "VERSION")
     private Long version;

@@ -28,6 +28,9 @@ export const AppRouter = () => {
               <div className="p-10 text-2xl font-bold">
                 여기는 일반 웹/앱 메인 화면입니다. 키오스크는 /kiosk 로
                 이동하세요!
+                <a href="/test-sms" className="text-blue-500 underline text-lg">
+                  👉 SMS 발송 테스트 페이지로 가기
+                </a>
               </div>
             }
           />
@@ -40,7 +43,7 @@ export const AppRouter = () => {
   {/* 메인 주소에서도 Home이 나오게 */}
   <Route path="/" element={<Home />} />
   {/* 테스트용 주소에서도 Home이 나오게 */}
-  <Route path="/test-modal" element={<Home />} />
+  <Route path="/test-sms" element={<Home />} />
 
         {/* ==========================================
                     2. 독립 영역 (키오스크 및 테스트/관리자)
