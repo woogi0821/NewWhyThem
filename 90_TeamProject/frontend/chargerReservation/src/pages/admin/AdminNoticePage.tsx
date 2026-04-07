@@ -1,21 +1,20 @@
 import { useState } from "react";
 import { AdminLayout } from "../../components/admin/AdminLayout";
+import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
 
 // ─────────────────────────────────────────────
 // 타입 정의
 // ─────────────────────────────────────────────
 
-// 공지사항 한 건의 구조
 interface Notice {
   id: string;
   title: string;
   content: string;
   author: string;
   createdAt: string;
-  isPinned: boolean; // Boolean 이므로 is 접두사 사용
+  isPinned: boolean;
 }
 
-// 공지 작성 / 수정 시 사용하는 폼 데이터 구조
 interface NoticeForm {
   title: string;
   content: string;
@@ -52,21 +51,39 @@ const AdminNoticePage = () => {
 
   // ── 상태 관리 ──────────────────────────────
 
-  // 공지 목록 상태 — 추가 / 수정 / 삭제 시 반영
   const [notices, setNotices] = useState<Notice[]>(INITIAL_NOTICES);
-
-  // 작성 모달 표시 여부
-  // Boolean 이므로 is 접두사 사용
-  const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
-
-  // 수정 모달에서 선택된 공지 — null 이면 모달 닫힘
+  const [modalMode, setModalMode] = useState<"write" | "edit" | null>(null);
   const [editNotice, setEditNotice] = useState<Notice | null>(null);
-
-  // 상세 보기에서 선택된 공지 — null 이면 닫힘
   const [detailNotice, setDetailNotice] = useState<Notice | null>(null);
-
-  // 작성 / 수정 폼 데이터
   const [form, setForm] = useState<NoticeForm>(EMPTY_FORM);
+
+  // ── 모달 닫기 ───────────────────────────────
+
+  const onCloseModal = () => {
+    setModalMode(null);
+    setEditNotice(null);
+    setForm(EMPTY_FORM);
+  };
+
+  // ── 공지 작성 모달 열기 ─────────────────────
+
+  const onOpenWriteModal = () => {
+    setForm(EMPTY_FORM);
+    setEditNotice(null);
+    setModalMode("write");
+  };
+
+  // ── 공지 수정 모달 열기 ─────────────────────
+
+  const onOpenEditModal = (notice: Notice) => {
+    setForm({
+      title: notice.title,
+      content: notice.content,
+      isPinned: notice.isPinned,
+    });
+    setEditNotice(notice);
+    setModalMode("edit");
+  };
 
   // ── 공지 작성 ──────────────────────────────
 
@@ -74,12 +91,10 @@ const AdminNoticePage = () => {
     if (!form.title.trim() || !form.content.trim()) return;
 
     const newNotice: Notice = {
-      // 새 id 생성 — 실제에서는 서버에서 받아옴
       id: "n" + String(notices.length + 1).padStart(3, "0"),
       title: form.title,
       content: form.content,
       author: "홍길동",
-      // 오늘 날짜를 YYYY.MM.DD 형식으로 생성
       createdAt: new Date().toLocaleDateString("ko-KR", {
         year: "numeric", month: "2-digit", day: "2-digit"
       }).replace(/\. /g, ".").replace(".", ".").slice(0, 10),
@@ -87,8 +102,7 @@ const AdminNoticePage = () => {
     };
 
     setNotices((prev) => [newNotice, ...prev]);
-    setIsWriteModalOpen(false);
-    setForm(EMPTY_FORM);
+    onCloseModal();
   };
 
   // ── 공지 수정 ──────────────────────────────
@@ -96,7 +110,6 @@ const AdminNoticePage = () => {
   const onEditNotice = () => {
     if (!editNotice || !form.title.trim() || !form.content.trim()) return;
 
-    // id 가 같은 공지를 찾아서 form 데이터로 교체
     setNotices((prev) =>
       prev.map((n) =>
         n.id === editNotice.id
@@ -104,39 +117,21 @@ const AdminNoticePage = () => {
           : n
       )
     );
-    setEditNotice(null);
-    setForm(EMPTY_FORM);
+    onCloseModal();
   };
 
   // ── 공지 삭제 ──────────────────────────────
 
   const onDeleteNotice = (id: string) => {
-    // id 가 다른 공지만 남김 → 해당 공지 제거
+    if (!window.confirm("정말 삭제하시겠습니까?")) return;
     setNotices((prev) => prev.filter((n) => n.id !== id));
-  };
-
-  // ── 수정 모달 열기 ──────────────────────────
-
-  const onOpenEditModal = (notice: Notice) => {
-    setEditNotice(notice);
-    // 현재 공지 데이터로 폼 초기화
-    setForm({
-      title: notice.title,
-      content: notice.content,
-      isPinned: notice.isPinned,
-    });
   };
 
   return (
     <AdminLayout adminName="홍길동">
 
       {/* 페이지 제목 */}
-      <div className="mb-6 flex items-center gap-3">
-        <div className="w-1 h-6 bg-[#cc0000]" />
-        <h1 className="text-lg font-semibold text-gray-800 tracking-wide">
-          공지사항
-        </h1>
-      </div>
+      <AdminPageHeader title="공지사항" />
 
       {/* 공지 목록 */}
       <div className="bg-white border border-gray-100 shadow-sm">
@@ -144,7 +139,8 @@ const AdminNoticePage = () => {
         {/* 섹션 헤더 */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <div className="w-1 h-4 bg-[#cc0000]" />
+            {/* 블루 포인트 라인 — 팀 시안 컬러 통일 */}
+            <div className="w-1 h-4 bg-blue-700" />
             <h2 className="text-sm font-semibold text-gray-700 tracking-wide">
               공지 목록
             </h2>
@@ -155,11 +151,8 @@ const AdminNoticePage = () => {
 
           {/* 공지 작성 버튼 */}
           <button
-            onClick={() => {
-              setForm(EMPTY_FORM);
-              setIsWriteModalOpen(true);
-            }}
-            className="px-4 py-2 text-xs text-white bg-[#cc0000] hover:bg-[#aa0000] transition-colors"
+            onClick={onOpenWriteModal}
+            className="px-4 py-2 text-xs text-white bg-blue-700 hover:bg-blue-800 transition-colors"
           >
             + 공지 작성
           </button>
@@ -198,13 +191,13 @@ const AdminNoticePage = () => {
                       onClick={() => setDetailNotice(notice)}
                     >
                       <div className="flex items-center gap-2">
-                        {/* 고정 공지 뱃지 */}
+                        {/* 고정 공지 뱃지 — 블루 계열로 변경 */}
                         {notice.isPinned && (
-                          <span className="px-1.5 py-0.5 text-xs bg-red-50 text-[#cc0000] font-medium rounded-sm">
+                          <span className="px-1.5 py-0.5 text-xs bg-blue-50 text-blue-700 font-medium rounded-sm">
                             고정
                           </span>
                         )}
-                        <span className="text-gray-700 font-medium hover:text-[#cc0000] transition-colors">
+                        <span className="text-gray-700 font-medium hover:text-blue-700 transition-colors">
                           {notice.title}
                         </span>
                       </div>
@@ -224,7 +217,7 @@ const AdminNoticePage = () => {
                         </button>
                         <button
                           onClick={() => onDeleteNotice(notice.id)}
-                          className="text-xs text-[#cc0000] hover:text-red-800 transition-colors"
+                          className="text-xs text-red-500 hover:text-red-700 transition-colors"
                         >
                           삭제
                         </button>
@@ -250,7 +243,8 @@ const AdminNoticePage = () => {
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
-                <div className="w-1 h-4 bg-[#cc0000]" />
+                {/* 블루 포인트 라인 */}
+                <div className="w-1 h-4 bg-blue-700" />
                 <h3 className="text-sm font-semibold text-gray-700">공지 상세</h3>
               </div>
               <button
@@ -264,7 +258,7 @@ const AdminNoticePage = () => {
               {/* 제목 */}
               <div className="flex items-center gap-2 mb-3">
                 {detailNotice.isPinned && (
-                  <span className="px-1.5 py-0.5 text-xs bg-red-50 text-[#cc0000] font-medium rounded-sm">
+                  <span className="px-1.5 py-0.5 text-xs bg-blue-50 text-blue-700 font-medium rounded-sm">
                     고정
                   </span>
                 )}
@@ -302,28 +296,34 @@ const AdminNoticePage = () => {
         </div>
       )}
 
-      {/* ── 공지 작성 모달 ── */}
-      {isWriteModalOpen && (
+      {/* ── 공지 작성 / 수정 통합 모달 ── */}
+      {modalMode !== null && (
         <div
           className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
-          onClick={() => setIsWriteModalOpen(false)}
+          onClick={onCloseModal}
         >
           <div
             className="bg-white w-full max-w-lg mx-4 shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* 모달 헤더 */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
-                <div className="w-1 h-4 bg-[#cc0000]" />
-                <h3 className="text-sm font-semibold text-gray-700">공지 작성</h3>
+                {/* 블루 포인트 라인 */}
+                <div className="w-1 h-4 bg-blue-700" />
+                <h3 className="text-sm font-semibold text-gray-700">
+                  {modalMode === "write" ? "공지 작성" : "공지 수정"}
+                </h3>
               </div>
               <button
-                onClick={() => setIsWriteModalOpen(false)}
+                onClick={onCloseModal}
                 className="text-gray-300 hover:text-gray-500 transition-colors"
               >
                 ✕
               </button>
             </div>
+
+            {/* 모달 폼 */}
             <div className="px-6 py-5 space-y-4">
 
               {/* 제목 입력 */}
@@ -331,10 +331,10 @@ const AdminNoticePage = () => {
                 <label className="block text-xs text-gray-400 tracking-wide mb-1">제목</label>
                 <input
                   type="text"
-                  placeholder="공지 제목을 입력하세요"
+                  placeholder={modalMode === "write" ? "공지 제목을 입력하세요" : ""}
                   value={form.title}
                   onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-                  className="w-full border-b border-gray-300 focus:border-[#cc0000] outline-none py-2 text-sm text-gray-700 placeholder:text-gray-300"
+                  className="w-full border-b border-gray-300 focus:border-blue-700 outline-none py-2 text-sm text-gray-700 placeholder:text-gray-300"
                 />
               </div>
 
@@ -342,11 +342,11 @@ const AdminNoticePage = () => {
               <div>
                 <label className="block text-xs text-gray-400 tracking-wide mb-1">내용</label>
                 <textarea
-                  placeholder="공지 내용을 입력하세요"
+                  placeholder={modalMode === "write" ? "공지 내용을 입력하세요" : ""}
                   value={form.content}
                   onChange={(e) => setForm((prev) => ({ ...prev, content: e.target.value }))}
                   rows={5}
-                  className="w-full border border-gray-200 focus:border-[#cc0000] outline-none p-3 text-sm text-gray-700 placeholder:text-gray-300 resize-none"
+                  className="w-full border border-gray-200 focus:border-blue-700 outline-none p-3 text-sm text-gray-700 placeholder:text-gray-300 resize-none"
                 />
               </div>
 
@@ -357,100 +357,24 @@ const AdminNoticePage = () => {
                   id="isPinned"
                   checked={form.isPinned}
                   onChange={(e) => setForm((prev) => ({ ...prev, isPinned: e.target.checked }))}
-                  className="accent-[#cc0000]"
+                  className="accent-blue-700"
                 />
                 <label htmlFor="isPinned" className="text-xs text-gray-500 cursor-pointer">
                   상단 고정 공지로 설정
                 </label>
               </div>
             </div>
+
+            {/* 모달 하단 버튼 */}
             <div className="flex gap-2 px-6 py-4 border-t border-gray-100">
               <button
-                onClick={onAddNotice}
-                className="flex-1 py-2 text-sm text-white bg-[#cc0000] hover:bg-[#aa0000] transition-colors"
+                onClick={modalMode === "write" ? onAddNotice : onEditNotice}
+                className="flex-1 py-2 text-sm text-white bg-blue-700 hover:bg-blue-800 transition-colors"
               >
-                작성 완료
+                {modalMode === "write" ? "작성 완료" : "수정 완료"}
               </button>
               <button
-                onClick={() => setIsWriteModalOpen(false)}
-                className="flex-1 py-2 text-sm text-gray-400 border border-gray-200 hover:bg-gray-50 transition-colors"
-              >
-                취소
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── 공지 수정 모달 ── */}
-      {editNotice && (
-        <div
-          className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
-          onClick={() => setEditNotice(null)}
-        >
-          <div
-            className="bg-white w-full max-w-lg mx-4 shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-1 h-4 bg-[#cc0000]" />
-                <h3 className="text-sm font-semibold text-gray-700">공지 수정</h3>
-              </div>
-              <button
-                onClick={() => setEditNotice(null)}
-                className="text-gray-300 hover:text-gray-500 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="px-6 py-5 space-y-4">
-
-              {/* 제목 입력 */}
-              <div>
-                <label className="block text-xs text-gray-400 tracking-wide mb-1">제목</label>
-                <input
-                  type="text"
-                  value={form.title}
-                  onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-                  className="w-full border-b border-gray-300 focus:border-[#cc0000] outline-none py-2 text-sm text-gray-700"
-                />
-              </div>
-
-              {/* 내용 입력 */}
-              <div>
-                <label className="block text-xs text-gray-400 tracking-wide mb-1">내용</label>
-                <textarea
-                  value={form.content}
-                  onChange={(e) => setForm((prev) => ({ ...prev, content: e.target.value }))}
-                  rows={5}
-                  className="w-full border border-gray-200 focus:border-[#cc0000] outline-none p-3 text-sm text-gray-700 resize-none"
-                />
-              </div>
-
-              {/* 고정 공지 체크박스 */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="isPinnedEdit"
-                  checked={form.isPinned}
-                  onChange={(e) => setForm((prev) => ({ ...prev, isPinned: e.target.checked }))}
-                  className="accent-[#cc0000]"
-                />
-                <label htmlFor="isPinnedEdit" className="text-xs text-gray-500 cursor-pointer">
-                  상단 고정 공지로 설정
-                </label>
-              </div>
-            </div>
-            <div className="flex gap-2 px-6 py-4 border-t border-gray-100">
-              <button
-                onClick={onEditNotice}
-                className="flex-1 py-2 text-sm text-white bg-[#cc0000] hover:bg-[#aa0000] transition-colors"
-              >
-                수정 완료
-              </button>
-              <button
-                onClick={() => setEditNotice(null)}
+                onClick={onCloseModal}
                 className="flex-1 py-2 text-sm text-gray-400 border border-gray-200 hover:bg-gray-50 transition-colors"
               >
                 취소

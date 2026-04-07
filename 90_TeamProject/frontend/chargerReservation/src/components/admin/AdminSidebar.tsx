@@ -34,6 +34,8 @@ const MENU_ITEMS: MenuItem[] = [
   { label: "충전기 관리", path: "/admin/charger" },
   { label: "예약 관리",   path: "/admin/reservation" },
   { label: "공지사항",    path: "/admin/notice" },
+  { label: "패널티 관리", path: "/admin/penalty" },
+  { label: "문의 관리",   path: "/admin/inquiry" },
 ];
 
 // ─────────────────────────────────────────────
@@ -69,8 +71,8 @@ export const AdminSidebar = ({
     >
       {/* 상단 — 로고 영역 */}
       <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-100">
-        {/* 테슬라 레드 포인트 라인 — 시안 스타일 통일 */}
-        <div className="w-1 h-5 bg-[#cc0000]" />
+        {/* 블루 포인트 라인 — 팀 시안 컬러 통일 */}
+        <div className="w-1 h-5 bg-blue-700" />
         <span className="text-sm font-semibold tracking-widest text-gray-800 uppercase">
           Admin
         </span>
@@ -92,8 +94,8 @@ export const AdminSidebar = ({
                 w-full text-left px-5 py-3 text-sm tracking-wide
                 transition-colors border-l-2
                 ${isActive
-                  // 활성화 상태 — 테슬라 레드 텍스트 + 좌측 라인
-                  ? "text-[#cc0000] border-l-[#cc0000] bg-red-50 font-medium"
+                  // 활성화 상태 — 블루 텍스트 + 좌측 라인 + 배경
+                  ? "text-blue-700 border-l-blue-700 bg-blue-50 font-medium"
                   // 비활성화 상태 — 회색 텍스트 + 투명 라인
                   : "text-gray-400 border-l-transparent hover:text-gray-700 hover:bg-gray-50"
                 }
@@ -117,7 +119,7 @@ export const AdminSidebar = ({
         {/* 로그아웃 버튼 */}
         <button
           onClick={onLogout}
-          className="text-xs text-gray-400 hover:text-[#cc0000] tracking-wide transition-colors"
+          className="text-xs text-gray-400 hover:text-blue-700 tracking-wide transition-colors"
         >
           로그아웃
         </button>
