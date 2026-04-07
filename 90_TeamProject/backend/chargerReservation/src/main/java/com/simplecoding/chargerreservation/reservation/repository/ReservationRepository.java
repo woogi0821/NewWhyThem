@@ -17,22 +17,37 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     //memberId의 예약 상태를 확인해서 예약 또는 충전중인 상태의 갯수를 파악함
     Long countByMemberIdAndStatusIn(Long memberId, List<String> statuses);
 
-    //시간 겹침 차단
     @Query("""
-        SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END
-        FROM Reservation r
-        WHERE r.chargerId = :chargerId
-        AND r.status IN ('RESERVED', 'CHARGING')
-        AND r.startTime < :endTime
-        AND r.endTime > :startTime
+    SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false  END 
+    FROM Reservation r
+    WHERE r.chargerId = :chargerId
+    AND(
+    r.status = 'CHARGING' OR (r.status = 'RESERVED' AND r.startTime > :graceDeadline)
+    )
 """)
-    boolean existsOverlappingReservation(
-            @Param("chargerId") String chargerId,
-            @Param("startTime")LocalDateTime startTime,
-            @Param("endTime") LocalDateTime endTime
-            );
+boolean isChargerCurrentlyOccupied(
+        @Param("chargerId") String chargerId,
+        @Param("graceDeadline") LocalDateTime graceDeadline
+    );
+
+    //노쇼 처리용 - grace period 지난 RESERVED 조회
+    List<Reservation> findByStatusAndStartTimeBefore(String status, LocalDateTime deadline);
+
 
     Optional<Reservation> findByChargerIdAndStatusAndReservationPin(String chargerId, String status, String reservationPin);
-    List<Reservation> findByStatusAndEndTimeBefore(String status, LocalDateTime endTime);
+// ─────────────────────────────────────────
+// [예약 조회용] 특정 회원의 모든 예약을 최신순으로 가져옴
+// JPA 네이밍 규칙: findBy + 필드명 + OrderBy + 필드명 + Desc
+// ─────────────────────────────────────────
+    List<Reservation> findByMemberIdOrderByStartTimeDesc(Long memberId);
+
+    // ─────────────────────────────────────────
+// [예약 취소 - 본인 검증용] reservationId + memberId 동시 조회
+// → 남의 예약을 취소하는 것을 방지하기 위해 두 조건 모두 충족해야 조회됨
+// ─────────────────────────────────────────
+    Optional<Reservation> findByIdAndMemberId(Long id, Long memberId);
+
+    Optional<Reservation> findByChargerIdAndStatus(String chargerId, String status);
+
 
 }

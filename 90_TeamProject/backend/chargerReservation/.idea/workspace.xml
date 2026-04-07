@@ -5,12 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="bef6268d-ebfe-4e7f-bfe9-4b23e66d89e4" name="변경" comment="">
-      <change beforePath="$PROJECT_DIR$/.gradle/9.3.1/checksums/checksums.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.3.1/checksums/checksums.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/9.3.1/checksums/md5-checksums.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.3.1/checksums/md5-checksums.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/9.3.1/checksums/sha1-checksums.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.3.1/checksums/sha1-checksums.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/9.3.1/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.3.1/fileHashes/fileHashes.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/controller/KioskController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/controller/KioskController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/controller/ReservationController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/controller/ReservationController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/dto/KioskDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/dto/KioskDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/repository/ReservationRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/repository/ReservationRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/service/KioskService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/service/KioskService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/service/ReservationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/simplecoding/chargerreservation/reservation/service/ReservationService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/simplecoding/chargerreservation/reservation/service/ReservationServiceTest.java" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -45,8 +47,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="JUnit5 Test Class" />
         <option value="Class" />
+        <option value="JUnit5 Test Class" />
       </list>
     </option>
   </component>
@@ -63,9 +65,17 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Gradle.ReservationServiceTest.cancelReservation_Fail_Charging.executor": "Run",
+    "Gradle.ReservationServiceTest.cancelReservation_Fail_NowOwner.executor": "Run",
+    "Gradle.ReservationServiceTest.cancelReservation_Success.executor": "Run",
+    "Gradle.ReservationServiceTest.createReservation_Fail_ChargerOccupied.executor": "Run",
     "Gradle.ReservationServiceTest.createReservation_Fail_MaxLimit.executor": "Run",
     "Gradle.ReservationServiceTest.createReservation_Fail_TimeOverlap.executor": "Run",
+    "Gradle.ReservationServiceTest.createReservation_Rapid_Success.executor": "Run",
     "Gradle.ReservationServiceTest.executor": "Run",
+    "Gradle.ReservationServiceTest.isChargerAvailable_False.executor": "Run",
+    "Gradle.ReservationServiceTest.isChargerAvailable_True.executor": "Run",
+    "JUnit.ReservationServiceTest.createReservation_Rapid_Success.executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
@@ -102,8 +112,8 @@
       <recent name="com.simplecoding.chargerreservation.reservation.service" />
     </key>
   </component>
-  <component name="RunManager" selected="Gradle.ReservationServiceTest.createReservation_Fail_TimeOverlap">
-    <configuration name="ReservationServiceTest" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+  <component name="RunManager" selected="Gradle.ReservationServiceTest.isChargerAvailable_False">
+    <configuration name="ReservationServiceTest.cancelReservation_Fail_Charging" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
@@ -116,7 +126,7 @@
           <list>
             <option value=":test" />
             <option value="--tests" />
-            <option value="&quot;com.simplecoding.chargerreservation.reservation.service.ReservationServiceTest&quot;" />
+            <option value="&quot;com.simplecoding.chargerreservation.reservation.service.ReservationServiceTest.cancelReservation_Fail_Charging&quot;" />
           </list>
         </option>
         <option name="vmOptions" />
@@ -130,7 +140,7 @@
       <GradleCoverageDisabled>false</GradleCoverageDisabled>
       <method v="2" />
     </configuration>
-    <configuration name="ReservationServiceTest.createReservation_Fail_MaxLimit" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+    <configuration name="ReservationServiceTest.cancelReservation_Fail_NowOwner" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
@@ -143,7 +153,7 @@
           <list>
             <option value=":test" />
             <option value="--tests" />
-            <option value="&quot;com.simplecoding.chargerreservation.reservation.service.ReservationServiceTest.createReservation_Fail_MaxLimit&quot;" />
+            <option value="&quot;com.simplecoding.chargerreservation.reservation.service.ReservationServiceTest.cancelReservation_Fail_NowOwner&quot;" />
           </list>
         </option>
         <option name="vmOptions" />
@@ -157,7 +167,7 @@
       <GradleCoverageDisabled>false</GradleCoverageDisabled>
       <method v="2" />
     </configuration>
-    <configuration name="ReservationServiceTest.createReservation_Fail_TimeOverlap" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+    <configuration name="ReservationServiceTest.cancelReservation_Success" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
@@ -170,7 +180,61 @@
           <list>
             <option value=":test" />
             <option value="--tests" />
-            <option value="&quot;com.simplecoding.chargerreservation.reservation.service.ReservationServiceTest.createReservation_Fail_TimeOverlap&quot;" />
+            <option value="&quot;com.simplecoding.chargerreservation.reservation.service.ReservationServiceTest.cancelReservation_Success&quot;" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <ExternalSystemDebugDisabled>false</ExternalSystemDebugDisabled>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>true</RunAsTest>
+      <GradleProfilingDisabled>false</GradleProfilingDisabled>
+      <GradleCoverageDisabled>false</GradleCoverageDisabled>
+      <method v="2" />
+    </configuration>
+    <configuration name="ReservationServiceTest.isChargerAvailable_False" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" value="" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value=":test" />
+            <option value="--tests" />
+            <option value="&quot;com.simplecoding.chargerreservation.reservation.service.ReservationServiceTest.isChargerAvailable_False&quot;" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <ExternalSystemDebugDisabled>false</ExternalSystemDebugDisabled>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>true</RunAsTest>
+      <GradleProfilingDisabled>false</GradleProfilingDisabled>
+      <GradleCoverageDisabled>false</GradleCoverageDisabled>
+      <method v="2" />
+    </configuration>
+    <configuration name="ReservationServiceTest.isChargerAvailable_True" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" value="" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value=":test" />
+            <option value="--tests" />
+            <option value="&quot;com.simplecoding.chargerreservation.reservation.service.ReservationServiceTest.isChargerAvailable_True&quot;" />
           </list>
         </option>
         <option name="vmOptions" />
@@ -194,9 +258,11 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Gradle.ReservationServiceTest.createReservation_Fail_TimeOverlap" />
-        <item itemvalue="Gradle.ReservationServiceTest.createReservation_Fail_MaxLimit" />
-        <item itemvalue="Gradle.ReservationServiceTest" />
+        <item itemvalue="Gradle.ReservationServiceTest.isChargerAvailable_False" />
+        <item itemvalue="Gradle.ReservationServiceTest.isChargerAvailable_True" />
+        <item itemvalue="Gradle.ReservationServiceTest.cancelReservation_Fail_Charging" />
+        <item itemvalue="Gradle.ReservationServiceTest.cancelReservation_Fail_NowOwner" />
+        <item itemvalue="Gradle.ReservationServiceTest.cancelReservation_Success" />
       </list>
     </recent_temporary>
   </component>
@@ -222,26 +288,12 @@
       <workItem from="1774917500854" duration="1784000" />
       <workItem from="1775087048123" duration="77000" />
       <workItem from="1775087135110" duration="1992000" />
+      <workItem from="1775540384006" duration="3514000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="java-method">
-          <url>file://$PROJECT_DIR$/src/test/java/com/simplecoding/chargerreservation/reservation/service/ReservationServiceTest.java</url>
-          <line>61</line>
-          <properties class="com.simplecoding.chargerreservation.reservation.service.ReservationServiceTest" method="createReservation_Fail_MaxLimit">
-            <option name="EMULATED" value="true" />
-            <option name="WATCH_EXIT" value="false" />
-          </properties>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

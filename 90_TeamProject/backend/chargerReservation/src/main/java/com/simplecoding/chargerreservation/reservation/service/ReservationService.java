@@ -14,6 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 
 @Log4j2
@@ -34,16 +35,15 @@ public class ReservationService {
         if (activeCount >= 2){
             throw  new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 2건의 활성 예약이 존재하여 더 이상 예약 할 수 없습니다.");
         }
-        //급속 및 완속충전 종류에따라 시간 더하기
-        int durationHours = "RAPID".equalsIgnoreCase(req.getChargerType())? 1 : 7;
-        LocalDateTime calculatedEndTime = req.getStartTime().plusHours(durationHours);
-        //시간 겹침 방지
-        boolean isOverlapped = reservationRepository.existsOverlappingReservation(
-                req.getChargerId(), req.getStartTime(), calculatedEndTime
+        LocalDateTime graceDeadline = LocalDateTime.now().minusMinutes(15);
+        boolean isOccupied = reservationRepository.isChargerCurrentlyOccupied(
+                req.getChargerId(),graceDeadline
         );
-        if (isOverlapped) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,"해당 시간에는 이미 다른 예약이 존재합니다.");
+        if (isOccupied){
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "현재 해당 충전기는 사용 중이거나 예약중 입니다.");
         }
+        int durationHours = "RAPID".equalsIgnoreCase(req.getChargerType()) ? 1:7;
+        LocalDateTime estimatedEndTime = req.getStartTime().plusHours(durationHours);
         String generatedPin = String.format("%04d",(int)(Math.random()*10000));
 
         Reservation reservation = Reservation.builder()
@@ -52,13 +52,12 @@ public class ReservationService {
                 .carNumber(req.getCarNumber())
                 .reservationPin(generatedPin)
                 .startTime(req.getStartTime())
-                .endTime(calculatedEndTime)
+                .endTime(estimatedEndTime)
                 .status("RESERVED")
                 .build();
 
         Reservation savedReservation = reservationRepository.save(reservation);
-        chargerSocketController.pushStatus(savedReservation.getChargerId(), "RESERVED");
-        log.info("웹소켓 푸시 완료 - chargerId : {}, status : RESERVED", savedReservation.getChargerId());
+        chargerSocketController.pushStatus(req.getChargerId(),"RESERVED");
 
         return ReservationDto.Response.builder()
                 .id(savedReservation.getId())
@@ -68,27 +67,53 @@ public class ReservationService {
                 .startTime(savedReservation.getStartTime())
                 .endTime(savedReservation.getEndTime())
                 .status(savedReservation.getStatus())
+                .chargerType(req.getChargerType())
                 .build();
     }
+    public List<ReservationDto.Response> getMyReservations(Long memberId){
+        List<Reservation> reservations = reservationRepository.findByMemberIdOrderByStartTimeDesc(memberId);
+        return reservations.stream()
+                .map(r -> ReservationDto.Response.builder()
+                        .id(r.getId())
+                        .chargerId(r.getChargerId())
+                        .carNumber(r.getCarNumber())
+                        .reservationPin(r.getReservationPin())
+                        .startTime(r.getStartTime())
+                        .endTime(r.getEndTime())
+                        .status(r.getStatus())
+                        .actualEndTime(r.getActualEndTime())
+                        .build()).collect(Collectors.toList());
+    }
+    @Transactional
+    public void cancelReservation(Long reservationId,Long memberId){
+        //검증단계 1 -> reservationId + memberId 동시조회
+        //두 조건이 맞아야 조회되므로 남의 예약 취소 자동 차단
+        Reservation reservation = reservationRepository
+                .findByIdAndMemberId(reservationId, memberId)
+                .orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"예약을 찾을 수 없거나 본인의 예약이 아닙니다."));
+                //검증단계 2 -> 이미 충전 중인 예약은 취소 불가
+                if ("CHARGING".equals(reservation.getStatus())) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"충전 중인 예약은 취소할 수 없습니다. 키오스크에서 직접 종료해 주세요.");
+                }
+                //검증단계 3 -> RESERVED상태일때만 취소 허용
+                if (!"RESERVED".equals(reservation.getStatus())){
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"취소가능한 상태가 아닙니다. (현재 상태 : " + reservation.getStatus() + ")");
+                }
+                //Entity의 ChangeStatus()메소드를 통해 상태 변경
+                //@Transactional이 붙어 있으므로 메소드 종료 시 자동으로 UPDATE 쿼리 실행(더티 체킹)
+                reservation.changeStatus("CANCELED");
+    }
+    public boolean isChargerAvailable (String chargerId){
+        LocalDateTime graceDeadline = LocalDateTime.now().minusMinutes(15);
+        return !reservationRepository.isChargerCurrentlyOccupied(chargerId,graceDeadline);
+    }
 
-    //1분마다 만료된 예약 자동처리 (방치된 CHARGING 상태의 안전망)
-    //해당 스케쥴이 필요한 이유 : 사용자가 충전종료 버튼을 누르지않고 이탈하는 케이스 대비
     @Scheduled(fixedDelay = 60000)
     @Transactional
-    public void expireOverdueReservations() {
-        LocalDateTime now = LocalDateTime.now();
-
-        //END_TIME이 지난 CHARGING 상태 예약만 정밀조회 함수(인덱스의 활용,서버 부하 최소화)
-        List<Reservation> overdueList = reservationRepository
-                .findByStatusAndEndTimeBefore("CHARGING", now);
-        if (overdueList.isEmpty()) return;
-        for (Reservation reservation : overdueList){
-            //endCharging()으로 상태변경 + actualEndTime 기록
-            reservation.endCharging("COMPLETED", now);
-            //키오스크 모킹화면에 AVAILABLE상태 푸시
-            chargerSocketController.pushStatus(reservation.getChargerId(),"AVAILABLE");
-            log.info("만료 예약 자동처리 - chargerId : {}, reservationId : {}",
-                    reservation.getChargerId(), reservation.getId());
-        }
+    public void processNoShow(){
+        LocalDateTime graceDeadline = LocalDateTime.now().minusMinutes(15);
+        List<Reservation> noShows = reservationRepository
+                .findByStatusAndStartTimeBefore("RESERVED", graceDeadline);
+        noShows.forEach(r -> r.changeStatus("NO_SHOW"));
     }
 }
