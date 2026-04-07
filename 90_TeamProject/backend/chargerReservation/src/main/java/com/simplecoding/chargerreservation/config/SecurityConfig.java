@@ -23,7 +23,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-    private JwtTokenProvider jwtTokenProvider;
+    private final JwtTokenProvider jwtTokenProvider;
     private final CustomOAuth2UserService customOAuth2UserService; // 소셜 정보 처리 서비스
     private final OAuth2SuccessHandler oAuth2SuccessHandler;       // 성공 시 JWT 발급 핸들러
 
