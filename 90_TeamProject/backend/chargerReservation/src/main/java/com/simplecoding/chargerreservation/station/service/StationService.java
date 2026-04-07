@@ -1,5 +1,6 @@
 package com.simplecoding.chargerreservation.station.service;
 
+import com.simplecoding.chargerreservation.common.MapStruct;
 import com.simplecoding.chargerreservation.station.dto.MarkerDto;
 import com.simplecoding.chargerreservation.charger.entity.ChargerEntity;
 import com.simplecoding.chargerreservation.station.dto.StationDto;
@@ -30,6 +31,7 @@ public class StationService {
     private final JdbcTemplate jdbcTemplate;
     private final StationRepository stationRepository;
     private final com.simplecoding.chargerreservation.charger.repository.ChargerRepository chargerRepository;
+    private final MapStruct mapStruct;
 
     // ==========================================
     // 1. 데이터 조회 및 검색 로직 (사용자 API용)
@@ -43,78 +45,35 @@ public class StationService {
     @Transactional(readOnly = true)
     public List<MarkerDto> getStationMarkers(Double lat, Double lng) {
         double radius = 1.5;
-        // DB에서는 정렬을 위해 거리를 계산하지만, DTO(MarkerDto)에는 담지 않습니다.
+        // MarkerProjection을 통해 DB에서 이미 계산된 통계 데이터를 가져옴
         List<MarkerProjection> projections = stationRepository.findMarkersWithinRadius(lat, lng, radius);
 
         return projections.stream()
                 .map(p -> {
-                    // 1. 기본 데이터 추출 (Null 방어)
-                    int total = p.getTotalCount() != null ? p.getTotalCount() : 0;
-                    int broken = p.getBrokenCount() != null ? p.getBrokenCount() : 0;
-                    int rawAvailable = p.getAvailableCount() != null ? p.getAvailableCount() : 0;
+                    // 1. MapStruct를 통해 Projection -> StationDto로 1차 변환 (주차/개방 정보 자동 포함)
+                    StationDto tempDto = mapStruct.toDto(p);
 
-                    // 2. [데이터 보정] 가용 대수는 (전체 - 고장)을 초과할 수 없음
-                    int realAvailable = rawAvailable;
-                    if (realAvailable + broken > total) {
-                        realAvailable = Math.max(0, total - broken);
-                    }
+                    // 2. 상태 계산 (기존 로직 유지하되 DTO 메서드 활용)
+                    tempDto.setStatusInfo(
+                            p.getAvailableCount() != null ? p.getAvailableCount() : 0,
+                            p.getTotalCount() != null ? p.getTotalCount() : 0,
+                            p.getBrokenCount() != null ? p.getBrokenCount() : 0
+                    );
 
-                    // [중요] 색상 계산을 위한 분모 설정
-                    // 기존 activeTotal 대신 'total'을 사용하여 고장 대수까지 포함한 전체 비율을 계산합니다.
-                    double calcRate = 0.0;
-                    String color = "gray";
-                    String warning = "NONE";
-                    String occupancyText;
-
-                    // 3. 전체 고장(TOTAL)인 경우 최우선 처리 (Black)
-                    if (total > 0 && total == broken) {
-                        color = "black";
-                        warning = "TOTAL";
-                        occupancyText = "점검 중";
-                    }
-                    // 4. 가동 중인 기기가 하나라도 있는 경우
-                    else if (total > 0) {
-                        warning = (broken > 0) ? "PARTIAL" : "NONE";
-
-                        // ✅ [수정] 분모를 total로 변경하여 고장난 기기가 있으면 비율이 낮아지도록 함
-                        // (주)국제식품 예시: (1 / 2) * 100 = 50% -> 'amber' 당첨!
-                        calcRate = ((double) realAvailable / total) * 100;
-
-                        // 색상 결정 로직
-                        if (realAvailable == 0) {
-                            color = "gray";       // 만차 (사용 가능한 기기 없음)
-                        } else if (calcRate >= 70) {
-                            color = "green";      // 여유
-                        } else if (calcRate >= 30) {
-                            color = "amber";      // 보통 (수정된 로직에 의해 50%는 여기가 됨)
-                        } else {
-                            color = "red";        // 혼잡
-                        }
-
-                        // [3단계] 현황 텍스트 (거리는 완전히 제거됨)
-                        occupancyText = (broken > 0)
-                                ? String.format("%d / %d (고장 %d)", realAvailable, total, broken)
-                                : String.format("%d / %d", realAvailable, total);
-                    } else {
-                        color = "gray";
-                        occupancyText = "확인불가";
-                    }
-
-                    // 5. 최종 MarkerDto 생성
+                    // 3. MarkerDto로 최종 변환 (화면 전달용 가벼운 객체)
                     return MarkerDto.builder()
                             .statId(p.getStatId())
-                            .statNm(p.getStatNm())
+                            .statNm(p.getStatNm()) // 👈 tempDto.getStatNm() 대신 p.getStatNm() 사용!
                             .lat(p.getLat())
                             .lng(p.getLng())
-                            // .distance() 는 MarkerDto 필드에서 삭제되었으므로 넣지 않음
-                            .availabilityRate(calcRate)
-                            .markerColor(color)
-                            .warningLevel(warning)
-                            .occupancy(occupancyText)
+                            .markerColor(tempDto.getMarkerColor())
+                            .warningLevel(tempDto.getWarningLevel())
+                            .occupancy(tempDto.getOccupancy())
                             .build();
                 })
                 .collect(Collectors.toList());
     }
+
     /**
      * [기능] 주변 충전소 목록 조회 (상세 정보 포함 리스트)
      * - 마커 조회와 비슷하지만, 충전소 이름, 주소 등 상세 정보를 담은 StationDto를 반환합니다.
@@ -122,33 +81,49 @@ public class StationService {
      */
     @Transactional(readOnly = true)
     public List<StationDto> getStationsWithDistancePaged(Double lat, Double lng, int page) {
+        // 1. 상수 및 현재 환경 설정 (실제로는 날짜 기반 유틸리티 사용 권장)
+        int year = 2026;
+        String season = "봄가을";
+        String type = "급속"; // 목록에서 기본으로 보여줄 타입 (필요시 파라미터로 받음)
+
         Set<String> fastTypes = Set.of("01", "03", "04", "05", "06", "08");
-        Set<String> slowTypes = Set.of("02", "07");
-        Set<String> brokenStats = Set.of("1", "4", "5"); // 고장 상태 코드 정의
+        Set<String> brokenStats = Set.of("1", "4", "5");
 
-        List<StationEntity> entities = stationRepository.findStationsWithinRadiusWithPaging(lat, lng, 1.5, page * 20, 20);
+        // 2. Repository 호출 (수정된 파라미터 반영: type, year, season 추가)
+        // [중요] Repository에서 p.unitPrice AS currentPrice를 가져오도록 쿼리가 수정되어 있어야 함
+        List<MarkerProjection> list = stationRepository.findStationsWithinRadiusWithPaging(
+                lat, lng, 1.5, type, year, season, page * 20, 20);
 
-        return entities.stream()
-                .map(entity -> {
-                    StationDto dto = StationDto.fromEntity(entity, lat, lng);
-                    List<ChargerEntity> chargers = chargerRepository.findByStatId(entity.getStatId());
+        return list.stream()
+                .map(p -> {
+                    // 1. MapStruct 및 기본 정보 세팅
+                    StationDto dto = mapStruct.toDto(p);
+                    dto.setStatNm(p.getStatNm());
+                    dto.setAddr(p.getAddr());
+                    dto.setDistance(p.getDistance());
+                    dto.setBnm(p.getBnm()); // 운영사 정보 확인
+                    dto.setCurrentPrice(p.getCurrentPrice());
 
-                    // 1. 가용, 전체, 고장 대수 계산
+                    // ✨ [신규] 조인된 요금 정보 세팅 (규칙 2)
+                    // MarkerProjection에 Double getCurrentPrice()가 추가되어 있어야 합니다.
+                    dto.setCurrentPrice(p.getCurrentPrice());
+
+                    // 2. 충전기 상세 현황 계산
+                    // Tip: 성능 최적화가 필요하다면 이 부분을 In절 쿼리로 한방에 가져오는게 좋음
+                    List<ChargerEntity> chargers = chargerRepository.findByStatId(p.getStatId());
+
                     int total = chargers.size();
                     int available = (int) chargers.stream().filter(c -> "2".equals(c.getStat())).count();
                     int broken = (int) chargers.stream().filter(c -> brokenStats.contains(c.getStat())).count();
 
-                    // 2. [핵심] StationDto에 새로 만든 통합 세팅 메서드 호출 (1, 2, 3단계 자동 처리)
                     dto.setStatusInfo(available, total, broken);
 
-                    // 3. 타입 판별 로직 (기존 유지)
-                    boolean hasFast = chargers.stream().anyMatch(c -> fastTypes.contains(c.getChargerType()));
-                    boolean hasSlow = chargers.stream().anyMatch(c -> slowTypes.contains(c.getChargerType()));
+                    // 3. 급속/완속 상세 텍스트 세팅
+                    Map<Boolean, List<ChargerEntity>> split = chargers.stream()
+                            .collect(Collectors.partitioningBy(c -> fastTypes.contains(c.getChargerType())));
 
-                    if (chargers.isEmpty()) dto.setChargerType("정보없음");
-                    else if (hasFast && hasSlow) dto.setChargerType("급속/완속");
-                    else if (hasFast) dto.setChargerType("급속");
-                    else dto.setChargerType("완속");
+                    processTypeDetail(dto, "급속", split.get(true), brokenStats);
+                    processTypeDetail(dto, "완속", split.get(false), brokenStats);
 
                     return dto;
                 }).collect(Collectors.toList());
@@ -160,15 +135,13 @@ public class StationService {
      * - 테스트 코드에서 호출하는 핵심 메서드입니다.
      */
     @Transactional(readOnly = true)
-    public StationDto getStationDetail(String statId, Double userLat, Double userLng) {
-        // ID로 조회하고 없으면 에러 처리
+    public StationDto getStationDetail(String statId) {
         StationEntity entity = stationRepository.findById(statId)
                 .orElseThrow(() -> new RuntimeException("해당 충전소를 찾을 수 없습니다. ID: " + statId));
 
-        // 엔티티를 DTO로 변환하여 반환
-        return StationDto.fromEntity(entity, userLat, userLng);
+        // [수정] 수동 fromEntity 삭제 -> MapStruct 사용
+        return mapStruct.toDto(entity);
     }
-
     /**
      * [기능] 충전소 통합 검색
      * - 검색어(키워드)를 입력받아 충전소명이나 주소 등에서 일치하는 데이터를 찾습니다.
@@ -180,10 +153,21 @@ public class StationService {
 
         List<StationEntity> entities = stationRepository.findByIntegratedSearch(keyword.trim());
 
+        // [수정] 수동 루프 삭제 -> MapStruct 스트림 활용
         return entities.stream()
-                .map(StationDto::fromEntity)
+                .map(mapStruct::toDto)
                 .collect(Collectors.toList());
     }
+
+// 보조 메서드: 타입별 상태 세팅 (코드 중복 방지)
+private void processTypeDetail(StationDto dto, String type, List<ChargerEntity> list, Set<String> brokenStats) {
+    if (list.isEmpty()) return;
+    int total = list.size();
+    int avail = (int) list.stream().filter(c -> "2".equals(c.getStat())).count();
+    int broken = (int) list.stream().filter(c -> brokenStats.contains(c.getStat())).count();
+    dto.setTypeDetailStatus(type, avail, total, broken);
+}
+
 
 
     // ==========================================

@@ -24,32 +24,23 @@ public class StationController {
      */
     @GetMapping("/markers")
     public ResponseEntity<List<MarkerDto>> getMarkers(
-            @RequestParam(value = "lat", required = false) Double lat,
-            @RequestParam(value = "lng", required = false) Double lng) {
+            @RequestParam Double lat,
+            @RequestParam Double lng) {
 
-        // 1. 요청 파라미터 로깅
-        log.info("🌐 [API] 지도 마커 조회 요청 - 기준 위도: {}, 경도: {}", lat, lng);
-
-        // 2. 필수 파라미터 검증 (방어 코드)
-        if (lat == null || lng == null) {
-            log.warn("⚠️ [API] 요청 위경도 값이 누락되었습니다. (lat: {}, lng: {})", lat, lng);
-            return ResponseEntity.badRequest().build();
+        // 1. 최소한의 유효성 검사 (실패 시 에러보다 빈 리스트가 지도가 멈추지 않아 안전함)
+        if (lat == null || lng == null || lat == 0.0 || lng == 0.0) {
+            return ResponseEntity.ok(List.of());
         }
 
         try {
-            // 3. 서비스 호출
-            // (주의: MarkerDto에는 이제 distance가 포함되지 않으며,
-            //  비율 계산 시 분모를 total로 사용하는 로직이 반영되어 있습니다.)
+            // 2. 서비스 호출 (MarkerDto는 이미 statId, statNm, lat, lng, color, occupancy만 포함됨)
             List<MarkerDto> markers = stationService.getStationMarkers(lat, lng);
 
-            // 4. 응답 결과 로깅
-            log.info("✅ [API] 마커 조회 완료 - 반환 건수: {}건 (거리 정보 제외)", markers.size());
-
-            // 5. 결과 반환
+            log.info("📍 마커 로드 완료: {}건", markers.size());
             return ResponseEntity.ok(markers);
 
         } catch (Exception e) {
-            log.error("❌ [API] 마커 조회 중 예외 발생: ", e); // 에러 스택트레이스까지 찍히도록 수정
+            log.error("❌ 마커 조회 중 오류 발생: {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -61,13 +52,10 @@ public class StationController {
     @GetMapping("/search")
     public ResponseEntity<List<StationDto>> searchStations(@RequestParam(value = "keyword", required = false) String keyword) {
         log.info("▶ [API 호출] 충전소 검색 - 키워드: [{}]", keyword);
-
-        // 서비스 호출
+// 서비스 호출
         List<StationDto> results = stationService.searchStations(keyword);
-
         log.info("◀ [API 응답] 검색 완료 - 결과: {}건", results.size());
-
-        // 200 OK 상태코드와 함께 결과 반환
+// 200 OK 상태코드와 함께 결과 반환
         return ResponseEntity.ok(results);
     }
 
@@ -75,28 +63,28 @@ public class StationController {
      * 3. [추가] 충전소 상세 정보 조회 (거리 계산 + 실시간 충전기 상태 포함)
      * GET /api/stations/KP002210?userLat=35.1485&userLng=129.0637
      */
-    @GetMapping("/{statId}")
-    public ResponseEntity<StationDto> getStationDetail(
-            @PathVariable String statId,
-            // defaultValue를 설정하거나 required = false를 주면 위치 정보가 없어도 에러가 나지 않습니다.
-            @RequestParam(required = false) Double userLat,
-            @RequestParam(required = false) Double userLng) {
-
-        log.info("🔍 [API] 충전소 상세 조회 요청 - ID: {}, 내 위치: ({}, {})",
-                statId,
-                userLat != null ? userLat : "알수없음",
-                userLng != null ? userLng : "알수없음");
-
-        try {
-            // 서비스 호출 (우리가 테스트했던 그 로직!)
-            StationDto detail = stationService.getStationDetail(statId, userLat, userLng);
-            return ResponseEntity.ok(detail);
-        } catch (RuntimeException e) {
-            // 충전소를 찾지 못했을 경우 404 Not Found를 응답하는 것이 더 정확합니다.
-            log.error("❌ 상세 조회 실패: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
-        }
-    }
+//    @GetMapping("/{statId}")
+//    public ResponseEntity<StationDto> getStationDetail(
+//            @PathVariable String statId,
+//            // defaultValue를 설정하거나 required = false를 주면 위치 정보가 없어도 에러가 나지 않습니다.
+//            @RequestParam(required = false) Double userLat,
+//            @RequestParam(required = false) Double userLng) {
+//
+//        log.info("🔍 [API] 충전소 상세 조회 요청 - ID: {}, 내 위치: ({}, {})",
+//                statId,
+//                userLat != null ? userLat : "알수없음",
+//                userLng != null ? userLng : "알수없음");
+//
+//        try {
+//            // 서비스 호출 (우리가 테스트했던 그 로직!)
+//            StationDto detail = stationService.getStationDetail(statId, userLat, userLng);
+//            return ResponseEntity.ok(detail);
+//        } catch (RuntimeException e) {
+//            // 충전소를 찾지 못했을 경우 404 Not Found를 응답하는 것이 더 정확합니다.
+//            log.error("❌ 상세 조회 실패: {}", e.getMessage());
+//            return ResponseEntity.notFound().build();
+//        }
+//    }
 
     /**
      * [추가] 1. 내 주변 충전소 리스트 조회 (무한 스크롤용 - 20개씩)
@@ -108,12 +96,25 @@ public class StationController {
             @RequestParam Double lng,
             @RequestParam(defaultValue = "0") int page) {
 
-        log.info("📱 [리스트 조회] 위도: {}, 경도: {}, 페이지: {}", lat, lng, page);
+        // 1. 유효하지 않은 좌표 방어 (0.0 또는 null)
+        // 리액트 무한 스크롤이나 리스트 맵핑 시 null보다는 빈 리스트([])가 훨씬 안전합니다.
+        if (lat == null || lng == null || lat == 0.0 || lng == 0.0) {
+            log.warn("⚠️ [API] 유효하지 않은 위치 정보입니다. 빈 리스트를 반환합니다.");
+            return ResponseEntity.ok(List.of());
+        }
 
-        // 우리가 테스트했던 그 서비스 메서드 호출! (반경 1.5km, 20개씩 페이징)
-        List<StationDto> stations = stationService.getStationsWithDistancePaged(lat, lng, page);
+        try {
+            // 2. 서비스 호출 (거리순 페이징 + 요금/현황 정보 포함)
+            List<StationDto> stations = stationService.getStationsWithDistancePaged(lat, lng, page);
 
-        return ResponseEntity.ok(stations);
+            // 3. 결과 로깅 및 응답 반환
+            // 데이터가 없더라도 빈 리스트([])를 반환해야 프론트의 .map() 함수가 터지지 않습니다.
+            log.info("📋 [API] 주변 목록 반환: {}건 (위도: {}, 경도: {}, 페이지: {})", stations.size(), lat, lng, page);
+            return ResponseEntity.ok(stations);
+
+        } catch (Exception e) {
+            log.error("❌ [API] 목록 조회 중 서버 오류 발생: ", e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
-
 }

@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.simplecoding.chargerreservation.charger.entity.ChargerEntity;
 import lombok.*;
 
+import java.util.Map;
+import java.util.Set;
+
 @Getter
 @Setter
 @ToString
@@ -11,6 +14,15 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class ChargerDto {
+
+    // 1. 메모리 최적화: 급속 타입 코드를 상수로 선언 (객체 재생성 방지)
+    private static final Set<String> FAST_TYPES = Set.of("01", "03", "04", "05", "06", "08");
+
+    // 2. 편의성: 충전기 상태 코드를 한글 텍스트로 매핑
+    private static final Map<String, String> STAT_LABELS = Map.of(
+            "1", "통신이상", "2", "충전대기", "3", "충전중",
+            "4", "운영중단", "5", "점검중", "9", "상태미확인"
+    );
 
     @JsonProperty("statId")
     private String statId;
@@ -23,6 +35,8 @@ public class ChargerDto {
 
     @JsonProperty("stat")
     private String stat;
+
+    private String statNm;        // "충전중", "대기중" 등 한글명 추가
 
     @JsonProperty("statUpdDt")
     private String statUpdDt;
@@ -45,23 +59,34 @@ public class ChargerDto {
     private String createdAt;
     private String updatedAt;
 
+    private String chargerTypeNm;
+    private boolean isFast;
+
     /**
      * Entity -> DTO 변환
-     * 누락되었던 실시간 상태 필드들을 추가했습니다.
      */
     public static ChargerDto fromEntity(ChargerEntity entity) {
         if (entity == null) return null;
+
+        String typeCode = entity.getChargerType();
+        // 미리 정의된 상수를 사용하여 메모리 사용량 절감
+        boolean fast = FAST_TYPES.contains(typeCode);
+
         return ChargerDto.builder()
                 .statId(entity.getStatId())
                 .chargerId(entity.getChargerId())
-                .chargerType(entity.getChargerType())
+                .chargerType(typeCode)
                 .stat(entity.getStat())
-                .statUpdDt(entity.getStatUpdDt()) // 추가
-                .output(entity.getOutput())       // 추가
+                // 상태 코드를 한글명으로 변환해서 저장
+                .statNm(STAT_LABELS.getOrDefault(entity.getStat(), "정보없음"))
+                .statUpdDt(entity.getStatUpdDt())
+                .output(entity.getOutput())
                 .method(entity.getMethod())
-                .lastTsdt(entity.getLastTsdt())   // 추가
-                .lastTedt(entity.getLastTedt())   // 추가
-                .nowTsdt(entity.getNowTsdt())     // 추가
+                .lastTsdt(entity.getLastTsdt())
+                .lastTedt(entity.getLastTedt())
+                .nowTsdt(entity.getNowTsdt())
+                .isFast(fast)
+                .chargerTypeNm(fast ? "급속" : "완속")
                 .build();
     }
 }
