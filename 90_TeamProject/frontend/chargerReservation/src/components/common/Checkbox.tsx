@@ -38,6 +38,22 @@ export const CheckBox = forwardRef<HTMLInputElement, CheckBoxProps>(
       checked:after:font-bold
     `;
 
+    // 2. 모양(Shape) 딕셔너리
+    const shapeStyles = {
+      square: "rounded-md",
+      circle: "rounded-full",
+    };
+
+    // 3. 용도(Variant) 딕셔너리
+    const variantStyles = {
+      primary: "border-zinc-300 checked:bg-blue-500 checked:border-blue-500 focus:ring-blue-200 group-hover:border-blue-400",
+      danger: "border-red-200 checked:bg-red-500 checked:border-red-500 focus:ring-red-200 group-hover:border-red-400",
+    };
+
+    const statusStyle = "bg-white disabled:bg-zinc-100 disabled:border-zinc-200 disabled:cursor-not-allowed";
+
+    // 4. 최종 클래스명 조립 (뼈대 + 모양 + 색상)
+    const combinedInputClassName = `${baseStyle} ${shapeStyles[shape]} ${statusStyle} ${variantStyles[variant]} ${className}`;
     // 2. 용도(variant)에 따른 테마 색상 딕셔너리
     const variantStyles = {
       primary: "border-zinc-300 checked:bg-green-500 checked:border-green-500 focus:ring-green-200 group-hover:border-green-400",
