@@ -1,14 +1,16 @@
 package com.simplecoding.chargerreservation.member.controller;
 
 import com.simplecoding.chargerreservation.common.CommonUtil;
-import com.simplecoding.chargerreservation.common.jwt.JwtTokenProvider;
 import com.simplecoding.chargerreservation.member.dto.MemberDto;
 import com.simplecoding.chargerreservation.member.dto.TokenDto;
 import com.simplecoding.chargerreservation.member.service.MemberService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.BindingResult;
@@ -16,6 +18,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -36,18 +40,39 @@ public class MemberController {
         return ResponseEntity.ok().build();
     }
 
-
-
-
     // 로그인 (성공 시 AT, RT 발급)
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody MemberDto memberDto) {
-        try{
-            // 실제 운영 시에는 HttpServletRequest에서 IP와 기기 정보를 추출하지만, 우선 임시값으로 테스트합니다.
-            TokenDto tokenDto = memberService.login(memberDto.getLoginId(), memberDto.getLoginPw(), "Web-Browser", "127.0.0.1");
-            log.info("로그인 성공: {}", memberDto.getLoginId());
-            return ResponseEntity.ok(tokenDto);
+    public ResponseEntity<?> login(@RequestBody MemberDto memberDto, HttpServletRequest request) {
+        try {
+            // IP 추출 (작성하신 메서드 활용) 및 User-Agent 추출
+            String clientIp = commonUtil.getClientIp(request);
+            String userAgent = request.getHeader("User-Agent");
+
+            // DB 저장 및 토큰 발급
+            TokenDto tokenDto = memberService.login(
+                memberDto.getLoginId(),
+                memberDto.getLoginPw(),
+                userAgent,
+                clientIp
+            );
+
+            // Refresh Token 전용 쿠키 생성
+            ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", tokenDto.getRefreshToken())
+                .httpOnly(true)    // JavaScript 접근 차단 (XSS 방어)
+                .secure(false)     // 로컬 테스트 시 false, HTTPS 배포 시 true
+                .path("/")
+                .maxAge(60 * 60 * 24 * 7) // 7일 (DB 만료일과 동기화)
+                .sameSite("Lax")   // CSRF 방어
+                .build();
+
+            log.info("로그인 완료: ID={}, IP={}", memberDto.getLoginId(), clientIp);
+
+            return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+                .body(tokenDto); // 프론트에서 accessToken을 꺼내 쓸 수 있도록 함
+
         } catch (RuntimeException e) {
+            log.error("로그인 실패: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
     }
@@ -74,4 +99,8 @@ public class MemberController {
         return ResponseEntity.ok("로그아웃 되었습니다.");
     }
 
+
+
 }
+
+
