@@ -4,6 +4,7 @@ import com.simplecoding.chargerreservation.penalty.dto.PenaltyRequestDto;
 import com.simplecoding.chargerreservation.penalty.dto.PenaltyResponseDto;
 import com.simplecoding.chargerreservation.penalty.entity.PenaltyHistory;
 import com.simplecoding.chargerreservation.penalty.repository.PenaltyRepository;
+import com.simplecoding.chargerreservation.reservation.entity.Reservation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,7 +18,7 @@ import java.util.stream.Collectors;
 public class PenaltyService {
 
     private final PenaltyRepository penaltyRepository;
-
+    private final SmsService smsService;
 
     //      1. 패널티 등록 및 문자 발송 (단계별 처리)
     @Transactional
@@ -91,5 +92,32 @@ public class PenaltyService {
                 .notiSentYn(penalty.getNotiSentYn())
                 .insertTime(penalty.getInsertTime())
                 .build();
+    }
+    @Transactional
+    public void processManualPenalty(Long reservationId, String reason) {
+        // 1. DB에서 해당 예약 정보 가져오기
+        Reservation res = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
+
+        // 2. [Validation] 이미 취소되거나 완료된 예약인지 확인
+        if (!"RESERVED".equals(res.getStatus())) {
+            throw new IllegalStateException("이미 처리되었거나 취소된 예약입니다.");
+        }
+
+        // 3. 문자 발송 (SmsService 호출)
+        // (주의: Member 연관관계가 설정되어 있어야 res.getMember() 사용 가능)
+        smsService.sendPenaltyMessage(
+// *******   Merge후 꼭 확인 (getName, getPhone 이름 동일한지) **************************
+                res.getMember().getPhone(),
+                res.getMember().getName(),
+                "관리자 부여 패널티 안내",
+                reason
+        );
+
+        // 4. DB 상태 업데이트
+        res.changeStatus("CANCELLED_PENALTY"); // 관리자가 직접 준 패널티라는 뜻
+        res.markAlertAsSent(); // 스케줄러가 또 건드리지 못하게 마킹
+
+        // 5. (나중에 팀 회의 후) PenaltyHistory 저장 로직이 여기 들어올 자리입니다.
     }
 }

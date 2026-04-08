@@ -63,6 +63,7 @@ public class ReservationService {
                 .startTime(savedReservation.getStartTime())
                 .endTime(savedReservation.getEndTime())
                 .status(savedReservation.getStatus())
+                .isAlertSent(savedReservation.getIsAlertSent())
                 .build();
     }
 }

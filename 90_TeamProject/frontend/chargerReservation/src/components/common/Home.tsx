@@ -14,21 +14,30 @@ export default function Home() {
     restrictUntil: "오늘 23:59"
   };
 
-  // 🎯 문자 발송 함수
+// 🎯 문자 발송함수
   const handleConfirm = async () => {
-    const result = await sendPenaltySms({
-      receiver: userData.phone,
-      userName: userData.name,
-      reason: userData.penaltyReason,
-      restrictUntil: userData.restrictUntil
-    });
+    try {
+      // 1. 서버에 데이터를 보냅니다.
+      const result = await sendPenaltySms({
+        reservationId: userData.id, // DB에서 가져온 진짜 예약 ID
+        reason: userData.penaltyReason,
+      });
 
-    if (result.success) {
-      alert("패널티 안내 문자가 발송되었습니다.");
-    } else {
-      alert("발송 실패: " + result.message);
+      // 2. 성공했을 때 (서버 응답이 200 OK인 경우)
+      if (result.success) {
+        alert("패널티 처리가 완료되었습니다.");
+        close(); // 모달 닫기
+      } else {
+        // 서버에서 success: false로 응답을 준 경우
+        alert("처리 실패: " + result.message);
+      }
+    } catch (error: any) {
+      // 3. 네트워크 에러나 서버에서 에러(400, 500)를 던졌을 때 잡는 곳
+      // 백엔드 PenaltyService에서 throw한 메시지를 여기서 출력합니다.
+      const errorMessage = error.response?.data?.message || "서버 통신 중 오류가 발생했습니다.";
+      alert("에러 발생: " + errorMessage);
+      console.error("Penalty Error:", error);
     }
-    close();
   };
 
   return (
