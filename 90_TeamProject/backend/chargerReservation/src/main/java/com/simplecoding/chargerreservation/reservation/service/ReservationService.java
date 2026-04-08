@@ -67,7 +67,7 @@ public class ReservationService {
                 .startTime(savedReservation.getStartTime())
                 .endTime(savedReservation.getEndTime())
                 .status(savedReservation.getStatus())
-                .chargerType(req.getChargerType())
+                .isAlertSent(savedReservation.getIsAlertSent())
                 .build();
     }
     public List<ReservationDto.Response> getMyReservations(Long memberId){

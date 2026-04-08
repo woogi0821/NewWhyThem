@@ -46,5 +46,6 @@ public class ReservationDto {
         private String status;
         private LocalDateTime actualEndTime;
         private String chargerType;
+        private String isAlertSent; // 👈 관리자 페이지에서 'Y/N' 확인용으로 추가
     }
 }
