@@ -70,6 +70,9 @@ dependencies {
 
     // 4. Redis (리프레시 토큰 저장 및 팀장님의 키오스크 PIN 번호 3분 만료용)
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // 4. 솔라피(문자 api)를 편하게 쓰기 위해 라이브러리를 추가
+    implementation 'net.nurigo:sdk:4.3.0'
     // JSON 처리를 위한 라이브러리 추가
     implementation 'org.json:json:20231013'
 

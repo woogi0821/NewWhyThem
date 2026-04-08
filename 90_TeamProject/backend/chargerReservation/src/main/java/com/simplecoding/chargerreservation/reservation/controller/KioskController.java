@@ -23,5 +23,17 @@ public class KioskController {
         return ResponseEntity.ok("인증성공 충전을 시작합니다.");
     }
 
+    @PostMapping("/end")
+    public ResponseEntity<String> endCharging(
+            @RequestBody @Valid KioskDto.EndRequest req) {
+        kioskService.endCharging(req);
+        return ResponseEntity.ok("충전이 종료되었습니다.");
+    }
 
+    @PostMapping("/stop")
+    public ResponseEntity<String> stopCharging(
+            @RequestBody @Valid KioskDto.StopRequest req) {
+        kioskService.stopCharging(req);
+        return ResponseEntity.ok("충전이 조기 종료되었습니다.");
+    }
 }
