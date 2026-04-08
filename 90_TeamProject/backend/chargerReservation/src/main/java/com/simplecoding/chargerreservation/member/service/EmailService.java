@@ -48,13 +48,14 @@ public class EmailService {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
         message.setFrom(senderEmail);
-        message.setSubject("[충전예약서비스] 회원가입 이메일 인증 번호");
+        message.setSubject("[ChargeNow] 회원가입 이메일 인증");
         message.setText("요청하신 인증 코드는 [ " + code + " ] \n5분 이내에 입력해주세요.");
 
         mailSender.send(message);
     }
 
     // 인증 번호 확인
+    @Transactional(noRollbackFor = IllegalArgumentException.class)
     public void verifyCode(EmailRequestDto.Verify request) {
         EmailVerification verification = verificationRepository.findById(request.getEmail())
             .orElseThrow(() -> new IllegalArgumentException("인증 요청 기록이 없습니다."));

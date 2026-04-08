@@ -30,7 +30,7 @@ public class OAuth2Attributes {
     }
 
     private static OAuth2Attributes ofKakao(String userNameAttributeName, Map<String, Object> attributes) {
-        // 카카오는 kakao_account 내부에 profile이 있고 그 안에 닉네임이 있음
+        // 카카오: kakao_account 내부에 profile이 있고 그 안에 닉네임이 있음
         Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
         Map<String, Object> kakaoProfile = (Map<String, Object>) kakaoAccount.get("profile");
 

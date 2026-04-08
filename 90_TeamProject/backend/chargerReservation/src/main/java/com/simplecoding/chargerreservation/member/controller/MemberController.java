@@ -39,7 +39,6 @@ public class MemberController {
 
 
 
-
     // 로그인 (성공 시 AT, RT 발급)
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody MemberDto memberDto) {

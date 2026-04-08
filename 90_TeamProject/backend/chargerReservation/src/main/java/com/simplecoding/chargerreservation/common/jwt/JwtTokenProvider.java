@@ -27,15 +27,12 @@ public class JwtTokenProvider {
     private final long accessTokenValidityInMilliseconds;
     private final long refreshTokenValidityInMilliseconds;
 
-    // 설정 파일(yml/properties)에서 값을 읽어와서 초기화
     public JwtTokenProvider(
         @Value("${jwt.secret-key}") String secretKey,
         @Value("${jwt.access-token-validity-in-milliseconds}") long accessTokenValidity,
         @Value("${jwt.refresh-token-validity-in-milliseconds}") long refreshTokenValidity) {
 
         // 시크릿 키를 Byte 배열로 변환 후 HMAC SHA 알고리즘에 맞는 Key 객체로 생성
-//        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-//        this.key = Keys.hmacShaKeyFor(keyBytes);
         byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
         this.key = Keys.hmacShaKeyFor(keyBytes);
 
@@ -44,7 +41,7 @@ public class JwtTokenProvider {
         this.refreshTokenValidityInMilliseconds = refreshTokenValidity * 1000;
     }
 
-    // [핵심] Access Token 생성
+    // Access Token 생성
     public String createAccessToken(Member member) {
         long now = (new Date()).getTime();
         Date validity = new Date(now + this.accessTokenValidityInMilliseconds);

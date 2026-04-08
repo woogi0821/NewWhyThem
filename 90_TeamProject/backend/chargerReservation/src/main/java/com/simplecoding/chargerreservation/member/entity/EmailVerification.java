@@ -64,7 +64,7 @@ public class EmailVerification {
         this.isVerified = "Y";
     }
 
-    // 인증번호 재발송 시 데이터 초기화 및 업데이트
+    // 인증번호 재발송 시 데이터 초기화
     public void renewVerification(String newCode, int validityMinutes) {
         this.authCode = newCode;
         this.isVerified = "N";
