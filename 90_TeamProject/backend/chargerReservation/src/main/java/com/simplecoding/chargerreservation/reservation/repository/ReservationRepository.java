@@ -34,4 +34,21 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     Optional<Reservation> findByChargerIdAndStatusAndReservationPin(String chargerId, String status, String reservationPin);
 
+    // 예약 시간이 1분 지났고, 아직 알림을 안 보낸 '예약중' 상태인 사람 조회
+    @Query("""
+        SELECT r FROM Reservation r 
+        WHERE r.startTime <= :targetTime 
+        AND r.status = 'RESERVED' 
+        AND r.isAlertSent = 'N'
+    """)
+    List<Reservation> findNoShowAlertTargets(@Param("targetTime") LocalDateTime targetTime);
+
+    // 예약 시간이 10분 지났고, 아직 충전을 시작 안 한(여전히 RESERVED) 사람 조회
+    @Query("""
+        SELECT r FROM Reservation r 
+        WHERE r.startTime <= :targetTime 
+        AND r.status = 'RESERVED'
+    """)
+    List<Reservation> findNoShowCancelTargets(@Param("targetTime") LocalDateTime targetTime);
+
 }

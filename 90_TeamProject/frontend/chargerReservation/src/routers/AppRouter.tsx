@@ -11,40 +11,53 @@ import AdminNoticePage from "../pages/admin/AdminNoticePage";
 import MainLayout from "../layout/basic/basicLayout";
 // import { SearchPage } from "../pages/SearchPage";
 import { ReservationPage } from "../pages/reservation/ReservationPage";
+import Home from "../components/common/Home";
 
 export const AppRouter = () => {
-    return (
-        <BrowserRouter>
-            <Routes>
-                {/* ==========================================
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* ==========================================
                     1. 일반 사용자 영역 (MainLayout의 헤더/푸터가 적용됨)
                    ========================================== */}
-                <Route path="/" element={<MainLayout />}>
-                    {/* 메인 홈 (기존에 path="/"에 있던 div를 여기로 옮겼습니다) */}
-                    <Route index element={
-                        <div className="p-10 text-2xl font-bold">
-                            여기는 일반 웹/앱 메인 화면입니다. 키오스크는 /kiosk 로 이동하세요!
-                        </div>
-                    } />
-                    {/* 검색 페이지 연결
+        <Route path="/" element={<MainLayout />}>
+          {/* 메인 홈 (기존에 path="/"에 있던 div를 여기로 옮겼습니다) */}
+          <Route
+            index
+            element={
+              <div className="p-10 text-2xl font-bold">
+                여기는 일반 웹/앱 메인 화면입니다. 키오스크는 /kiosk 로
+                이동하세요!
+                <a href="/test-sms" className="text-blue-500 underline text-lg">
+                  👉 SMS 발송 테스트 페이지로 가기
+                </a>
+              </div>
+            }
+          />
+          {/* 검색 페이지 연결
                     <Route path="search" element={<SearchPage />} /> */}
-                    {/* 예약 페이지 연결 🎯 */}
-                    <Route path="reservation" element={<ReservationPage />} />
-                </Route>
+          {/* 예약 페이지 연결 🎯 */}
+          <Route path="reservation" element={<ReservationPage />} />
+        </Route>
+    
+  {/* 메인 주소에서도 Home이 나오게 */}
+  <Route path="/" element={<Home />} />
+  {/* 테스트용 주소에서도 Home이 나오게 */}
+  <Route path="/test-sms" element={<Home />} />
 
-                {/* ==========================================
+        {/* ==========================================
                     2. 독립 영역 (키오스크 및 테스트/관리자)
                    ========================================== */}
-                <Route path="kiosk" element={<ChargerMain/>}/>
-                <Route path="/toast-test" element={<ToastTestPage />} />
-                
-                {/* 관리자 페이지들 (팀장님 기존 코드 유지) */}
-                <Route path="/admin" element={<AdminPage />} />
-                <Route path="/admin/member" element={<AdminMemberPage />} />
-                <Route path="/admin/charger" element={<AdminChargerPage />} />
-                <Route path="/admin/reservation" element={<AdminReservationPage />} />
-                <Route path="/admin/notice" element={<AdminNoticePage />} />
-            </Routes>
-        </BrowserRouter>
-    );
+        <Route path="kiosk" element={<ChargerMain />} />
+        <Route path="/toast-test" element={<ToastTestPage />} />
+
+        {/* 관리자 페이지들 (팀장님 기존 코드 유지) */}
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/member" element={<AdminMemberPage />} />
+        <Route path="/admin/charger" element={<AdminChargerPage />} />
+        <Route path="/admin/reservation" element={<AdminReservationPage />} />
+        <Route path="/admin/notice" element={<AdminNoticePage />} />
+      </Routes>
+    </BrowserRouter>
+  );
 };
