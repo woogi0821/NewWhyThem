@@ -70,7 +70,6 @@ public class EmailVerification {
         this.isVerified = "N";
         this.retryCount = 0;
         this.expiredAt = LocalDateTime.now().plusMinutes(validityMinutes);
-        this.lastSentAt = LocalDateTime.now();
     }
 
 }

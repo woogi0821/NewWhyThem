@@ -59,7 +59,7 @@ public class OAuth2Attributes {
     }
 
     /**
-     * 처음 가입하는 시점에 Member 엔티티를 생성
+     * 처음 가입하는 시점 Member 엔티티를 생성
      */
     public Member toEntity() {
         return Member.builder()

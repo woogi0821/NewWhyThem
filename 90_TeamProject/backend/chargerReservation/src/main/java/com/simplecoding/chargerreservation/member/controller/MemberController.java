@@ -1,13 +1,17 @@
 package com.simplecoding.chargerreservation.member.controller;
 
+import com.simplecoding.chargerreservation.common.CommonUtil;
+import com.simplecoding.chargerreservation.common.jwt.JwtTokenProvider;
 import com.simplecoding.chargerreservation.member.dto.MemberDto;
 import com.simplecoding.chargerreservation.member.dto.TokenDto;
 import com.simplecoding.chargerreservation.member.service.MemberService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,14 +22,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RequestMapping("/member")
 public class MemberController {
+
     private final MemberService memberService;
+    private final CommonUtil commonUtil;
 
     // 회원가입
     @PostMapping("/join")
-    public ResponseEntity<String> join(@RequestBody MemberDto memberDto) {
+    public ResponseEntity<String> join(@Valid @RequestBody MemberDto memberDto,
+                                       BindingResult result) {
+        commonUtil.checkBindingResult(result);
         memberService.join(memberDto);
-        return ResponseEntity.ok("회원가입이 완료되었습니다.");
+
+        return ResponseEntity.ok().build();
     }
+
+
+
+
 
     // 로그인 (성공 시 AT, RT 발급)
     @PostMapping("/login")

@@ -8,6 +8,6 @@ import java.util.Optional;
 
 @Repository
 public interface EmailVerificationRepository extends JpaRepository<EmailVerification, String> {
-    // findById(String email)를 통해 인증 정보를 조회
+    // 이메일 인증 정보 조회
     Optional<EmailVerification> findByEmailAndIsVerified(String email, String isVerified);
 }

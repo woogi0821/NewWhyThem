@@ -26,7 +26,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User oAuth2User = super.loadUser(userRequest);
 
-        // 서비스 구분 (kakao, naver 등)
+        // 서비스 구분 (KAKAO, NAVER 등)
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
 
         // OAuth2 로그인 진행 시 키가 되는 필드값 (PK 역할)
@@ -41,7 +41,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         // 시큐리티 세션에 저장할 사용자 객체 반환
         return new DefaultOAuth2User(
-            Collections.singleton(new SimpleGrantedAuthority("ROLE_USER")),
+//            Collections.singleton(new SimpleGrantedAuthority("ROLE_USER")),
+            Collections.singleton(new SimpleGrantedAuthority(member.getMemberGrade())),
             attributes.getAttributes(),
             attributes.getNameAttributeKey()
         );
