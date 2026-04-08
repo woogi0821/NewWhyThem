@@ -1,82 +1,105 @@
 package com.simplecoding.chargerreservation.station.dto;
 
-import com.simplecoding.chargerreservation.station.entity.StationEntity;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.simplecoding.chargerreservation.charger.dto.ChargerDto;
+import com.simplecoding.chargerreservation.chargerPrice.dto.ChargerPriceDto;
 import lombok.*;
+import java.util.List;
 
-/**
- * 전기차 충전소 데이터 전송 객체 (DTO)
- */
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @ToString
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class StationDto {
 
-    private String statId;       // 1. 충전소 ID
-    private String statNm;       // 2. 충전소명
-    private String addr;         // 3. 주소
-    private String location;     // 4. 상세위치
-    private Double lat;          // 5. 위도
-    private Double lng;          // 6. 경도
-    private String useTime;      // 7. 이용시간
-    private String bnm;          // 8. 운영기관명
-    private String zcode;        // 9. 시도 코드
-    private String zscode;       // 10. 구군 코드
-    private String kind;         // 11. 충전소 구분
-    private String parkingFree;  // 12. 주차료 무료 여부
-    private String limitYn;      // 13. 이용 제한 여부
-    private String limitDetail;  // 14. 제한 사유 상세
+    // --- 기본 필드 (Entity와 1:1 매핑) ---
+    private String statId;
+    private String statNm;
+    private String addr;
+    private String location;
+    private Double lat;
+    private Double lng;
+    private String useTime;
+    private String bnm;
+    private String zcode;
+    private String zscode;
+    private String kind;
+    private String parkingFree;
+    private String limitYn;
+    private String limitDetail;
 
-    // --- [추가] 프론트엔드 검색 및 시각화를 위한 필드 ---
+    // --- 계산 및 상태 필드 ---
+    private Integer availableCount;
+    private Integer totalCount;
+    private Integer brokenCount;
+    private Double distance;
+    private List<ChargerDto> chargers;
+    private String statSummary;     // 마커용 요약
+    private String markerColor;
+    private String warningLevel;
+    private String occupancy;
 
-    private Integer availableCount; // 현재 사용 가능한 충전기 수 (STAT='2'인 개수)
-    private Integer totalCount;     // 해당 충전소의 전체 충전기 수
-    private Double distance;        // 내 위치로부터의 거리 (단위: km)
+    // --- 변환 필드 (MapStruct가 채워줄 예정) ---
+    private String parkingInfo;     // "무료주차" 또는 "유료주차"
+    private String openStatus;      // "개방" 또는 "미개방(사유)"
+    private String fastChargerStatus;
+    private String slowChargerStatus;
 
-    // --- [추가] Entity를 DTO로 변환하는 생성자 또는 메서드 ---
+    // --- [신규] 요금 정보 필드 ---
+    private Double currentPrice;
+    private ChargerPriceDto priceDetail;
+
     /**
-     * DB에서 가져온 Entity를 프론트에 보낼 DTO로 변환할 때 사용합니다.
+     * 상태 및 마커 정보 세팅 (계산 로직만 유지)
      */
-    public static StationDto fromEntity(StationEntity entity) {
-        return StationDto.builder()
-                .statId(entity.getStatId())
-                .statNm(entity.getStatNm())
-                .addr(entity.getAddr())
-                .location(entity.getLocation())
-                .lat(entity.getLat())
-                .lng(entity.getLng())
-                .useTime(entity.getUseTime())
-                .bnm(entity.getBnm())
-                .zcode(entity.getZcode())
-                .zscode(entity.getZscode())
-                .kind(entity.getKind())
-                .parkingFree(entity.getParkingFree())
-                .limitYn(entity.getLimitYn())
-                .limitDetail(entity.getLimitDetail())
-                .build();
+    public void setStatusInfo(int available, int total, int broken) {
+        this.availableCount = Math.max(0, (available + broken > total) ? total - broken : available);
+        this.totalCount = total;
+        this.brokenCount = broken;
+
+        int activeTotal = Math.max(0, total - broken);
+        if (total > 0 && (total == broken || activeTotal == 0)) {
+            this.markerColor = "black";
+            this.warningLevel = "TOTAL";
+            this.statSummary = "점검 중";
+        } else if (total > 0) {
+            this.warningLevel = (broken > 0) ? "PARTIAL" : "NONE";
+            double rate = (activeTotal > 0) ? ((double) this.availableCount / activeTotal) * 100 : 0;
+
+            if (this.availableCount == 0) this.markerColor = "gray";
+            else if (rate >= 70) this.markerColor = "green";
+            else if (rate >= 30) this.markerColor = "amber";
+            else this.markerColor = "red";
+
+            this.statSummary = (broken > 0)
+                    ? String.format("%d/%d (고장%d)", this.availableCount, total, broken)
+                    : String.format("%d/%d", this.availableCount, total);
+        } else {
+            this.markerColor = "gray";
+            this.statSummary = "확인불가";
+            this.warningLevel = "NONE";
+        }
+
+        // ⭐ [추가] 테스트 코드에서 검증하는 occupancy 필드에 값을 채워줍니다.
+        this.occupancy = this.statSummary;
+    }
+
+    public void setTypeDetailStatus(String type, int available, int total, int broken) {
+        String statusText = (broken > 0) ? String.format("%s %d/%d (고장%d)", type, available, total, broken) : String.format("%s %d/%d", type, available, total);
+        if ("급속".equals(type)) this.fastChargerStatus = statusText;
+        else if ("완속".equals(type)) this.slowChargerStatus = statusText;
     }
 
     /**
-     * DTO 데이터를 바탕으로 새로운 StationEntity 객체를 생성합니다.
+     * 프론트엔드에서 호출할 요금 표시용 메서드
      */
-    public StationEntity toEntity() {
-        return StationEntity.builder()
-                .statId(this.statId)
-                .statNm(this.statNm)
-                .addr(this.addr)
-                .location(this.location)
-                .lat(this.lat)
-                .lng(this.lng)
-                .useTime(this.useTime)
-                .bnm(this.bnm)
-                .zcode(this.zcode)
-                .zscode(this.zscode)
-                .kind(this.kind)
-                .parkingFree(this.parkingFree)
-                .limitYn(this.limitYn)
-                .limitDetail(this.limitDetail)
-                .build();
+    public String getPriceDisplayText() {
+        if (this.currentPrice == null || this.currentPrice <= 0) {
+            return "현장에서 확인하세요";
+        }
+        return String.format("%.1f원/kWh", this.currentPrice);
     }
 }
