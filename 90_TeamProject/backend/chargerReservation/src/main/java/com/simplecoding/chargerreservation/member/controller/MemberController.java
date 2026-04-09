@@ -2,7 +2,7 @@ package com.simplecoding.chargerreservation.member.controller;
 
 import com.simplecoding.chargerreservation.common.CommonUtil;
 import com.simplecoding.chargerreservation.member.dto.MemberDto;
-import com.simplecoding.chargerreservation.member.dto.TokenDto;
+import com.simplecoding.chargerreservation.member.dto.MemberTokenDto;
 import com.simplecoding.chargerreservation.member.service.MemberService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -18,8 +18,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @Slf4j
 @RestController
@@ -49,7 +47,7 @@ public class MemberController {
             String userAgent = request.getHeader("User-Agent");
 
             // DB 저장 및 토큰 발급
-            TokenDto tokenDto = memberService.login(
+            MemberTokenDto tokenDto = memberService.login(
                 memberDto.getLoginId(),
                 memberDto.getLoginPw(),
                 userAgent,
@@ -59,13 +57,11 @@ public class MemberController {
             // Refresh Token 전용 쿠키 생성
             ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", tokenDto.getRefreshToken())
                 .httpOnly(true)    // JavaScript 접근 차단 (XSS 방어)
-                .secure(false)     // 로컬 테스트 시 false, HTTPS 배포 시 true
+                .secure(false)     // TODO: HTTPS 배포 시 true로 변경 (로컬: false)
                 .path("/")
                 .maxAge(60 * 60 * 24 * 7) // 7일 (DB 만료일과 동기화)
-                .sameSite("Lax")   // CSRF 방어
+                .sameSite("Lax")
                 .build();
-
-            log.info("로그인 완료: ID={}, IP={}", memberDto.getLoginId(), clientIp);
 
             return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
@@ -79,9 +75,9 @@ public class MemberController {
 
     // 토큰 재발급 (AccessToken 만료 시 리액트에서 호출)
     @PostMapping("/refresh")
-    public ResponseEntity<TokenDto> refresh(@RequestBody String refreshToken) {
+    public ResponseEntity<MemberTokenDto> refresh(@RequestBody String refreshToken) {
         // 클라이언트가 보낸 RT로 새 AT를 발급
-        TokenDto newAccessToken = memberService.refreshAccessToken(refreshToken);
+        MemberTokenDto newAccessToken = memberService.refreshAccessToken(refreshToken);
         return ResponseEntity.ok(newAccessToken);
     }
 

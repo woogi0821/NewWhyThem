@@ -3,7 +3,7 @@ package com.simplecoding.chargerreservation.member.service;
 import com.simplecoding.chargerreservation.common.jwt.JwtTokenProvider;
 import com.simplecoding.chargerreservation.common.SecurityUtil;
 import com.simplecoding.chargerreservation.member.dto.MemberDto;
-import com.simplecoding.chargerreservation.member.dto.TokenDto;
+import com.simplecoding.chargerreservation.member.dto.MemberTokenDto;
 import com.simplecoding.chargerreservation.member.entity.EmailVerification;
 import com.simplecoding.chargerreservation.member.entity.Member;
 import com.simplecoding.chargerreservation.member.entity.MemberToken;
@@ -52,9 +52,6 @@ public class MemberService {
             .email(dto.getEmail())
             .name(dto.getName())
             .phone(dto.getPhone())
-//            .status("ACTIVE")
-//            .memberGrade("N")
-//            .provider("LOCAL")
             .build();
 
         // 저장 및 인증 데이터 삭제
@@ -68,7 +65,7 @@ public class MemberService {
     /**==========================================
      * 로그인 인증 및 보안 (Auth)
      ========================================== */
-    public TokenDto login(String loginId, String password, String userAgent, String clientIp) {
+    public MemberTokenDto login(String loginId, String password, String userAgent, String clientIp) {
         Member member = memberRepository.findByLoginId(loginId)
             .orElseThrow(() -> new RuntimeException("아이디 또는 비밀번호가 일치하지 않습니다."));
 
@@ -91,16 +88,17 @@ public class MemberService {
 
         memberTokenRepository.save(memberToken);
 
-        return TokenDto.builder()
+        return MemberTokenDto.builder()
             .grantType("Bearer")
             .accessToken(accessToken)
             .refreshToken(refreshToken)
+            .memberGrade(member.getMemberGrade())
             .build();
     }
 
     // 토큰 재발급: 유효한 RefreshToken을 받아서 새로운 AccessToken을 생성
     @Transactional
-    public TokenDto refreshAccessToken(String refreshToken) {
+    public MemberTokenDto refreshAccessToken(String refreshToken) {
         // 전달받은 RefreshToken이 유효한지 체크 (유효기간 등)
         if (!jwtTokenProvider.validateToken(refreshToken)) {
             throw new RuntimeException("리프레시 토큰이 만료되었습니다. 다시 로그인하세요.");
@@ -120,7 +118,7 @@ public class MemberService {
         memberToken.setExpiresAt(LocalDateTime.now().plusDays(7)); // 만료일 갱신
 
         // 새로운 AccessToken만 만들어서 반환(로그인 상태 연장)
-        return TokenDto.builder()
+        return MemberTokenDto.builder()
             .grantType("Bearer")
             .accessToken(newAt)
             .refreshToken(newRt)

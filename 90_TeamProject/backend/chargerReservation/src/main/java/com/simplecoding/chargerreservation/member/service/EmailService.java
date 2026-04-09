@@ -1,6 +1,6 @@
 package com.simplecoding.chargerreservation.member.service;
 
-import com.simplecoding.chargerreservation.member.dto.EmailRequestDto;
+import com.simplecoding.chargerreservation.member.dto.EmailVerificationDto;
 import com.simplecoding.chargerreservation.member.entity.EmailVerification;
 import com.simplecoding.chargerreservation.member.repository.EmailVerificationRepository;
 import com.simplecoding.chargerreservation.member.repository.MemberRepository;
@@ -56,7 +56,7 @@ public class EmailService {
 
     // 인증 번호 확인
     @Transactional(noRollbackFor = IllegalArgumentException.class)
-    public void verifyCode(EmailRequestDto.Verify request) {
+    public void verifyCode(EmailVerificationDto.Verify request) {
         EmailVerification verification = verificationRepository.findById(request.getEmail())
             .orElseThrow(() -> new IllegalArgumentException("인증 요청 기록이 없습니다."));
 

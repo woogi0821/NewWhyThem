@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.*;
 
-public class EmailRequestDto {
+public class EmailVerificationDto {
     @Getter
     @ToString
     @Builder
