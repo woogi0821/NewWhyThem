@@ -15,41 +15,42 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class StationDto {
 
-    // --- 기본 필드 (Entity와 1:1 매핑) ---
+    // 1. [기본 정보] - 명칭, 주소, 위치 관련 (상세 항목 1, 2, 9, 10, 11)
     private String statId;
-    private String statNm;
-    private String addr;
-    private String location;
+    private String statNm;          // 1. 충전소명
+    private String addr;            // 2. 주소
+    private String bnm;             // 9. 기관명
+    private String location;        // 10. 상세위치
+    private String useTime;         // 11. 이용가능 시간
     private Double lat;
     private Double lng;
-    private String useTime;
-    private String bnm;
-    private String zcode;
-    private String zscode;
-    private String kind;
-    private String parkingFree;
-    private String limitYn;
-    private String limitDetail;
+    private Double distance;        // 3. 거리
 
-    // --- 계산 및 상태 필드 ---
+    // 2. [상태 및 마커 정보] - 실시간 현황 (상세 항목 5, 12)
     private Integer availableCount;
     private Integer totalCount;
     private Integer brokenCount;
-    private Double distance;
-    private List<ChargerDto> chargers;
-    private String statSummary;     // 마커용 요약
-    private String markerColor;
-    private String warningLevel;
-    private String occupancy;
-
-    // --- 변환 필드 (MapStruct가 채워줄 예정) ---
-    private String parkingInfo;     // "무료주차" 또는 "유료주차"
-    private String openStatus;      // "개방" 또는 "미개방(사유)"
+    private String occupancy;       // 5. 현황 (예: 2/4 (고장2))
+    private String lastUpdated;     // 12. 업데이트 날짜
+    private String statSummary;     // 요약 텍스트
+    private String markerColor;     // 마커 색상
+    private String warningLevel;    // 경고 수준
     private String fastChargerStatus;
     private String slowChargerStatus;
 
-    // --- [신규] 요금 정보 필드 ---
-    private Double currentPrice;
+    // 3. [제약 및 주차 정보] - 이용 조건 (상세 항목 6, 7, 8)
+    private String limitYn;         // 6. 주차가능유무 (이용자제한 여부)
+    private String parkingFree;     // 7. 주차요금 (무료/유료 여부)
+    private String limitDetail;     // 8. 이용자제한 상세내용
+    private String parkingInfo;     // 변환용 ("무료주차" 등)
+    private String openStatus;      // 변환용 ("개방" 등)
+
+    // 4. [요금 정보] - 가격 비교 및 계절 (상세 항목 4)
+    private Double currentPrice;    // 현재 요금
+    private Double lastYearPrice;   // 작년 요금
+    private Double priceDiff;       // 요금 차이
+    private String season;          // 현재 계절 (봄/가을, 여름, 겨울)
+    private List<ChargerDto> chargers;
     private ChargerPriceDto priceDetail;
 
     /**
@@ -102,4 +103,24 @@ public class StationDto {
         }
         return String.format("%.1f원/kWh", this.currentPrice);
     }
+
+    /**
+     * [추가] 요금 비교 및 계절 정보 세팅 로직
+     * 서비스 단에서 호출하여 데이터를 완성합니다.
+     */
+    public void setPriceComparison(Double current, Double lastYear, String currentMonth) {
+        this.currentPrice = current;
+        this.lastYearPrice = lastYear;
+        if (current != null && lastYear != null) {
+            this.priceDiff = current - lastYear;
+        }
+
+        // 계절 판별 (간단 로직)
+        int month = Integer.parseInt(currentMonth);
+        if (month >= 3 && month <= 5 || month >= 9 && month <= 11) this.season = "봄/가을";
+        else if (month >= 6 && month <= 8) this.season = "여름";
+        else this.season = "겨울";
+    }
+
+
 }

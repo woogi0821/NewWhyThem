@@ -30,12 +30,12 @@ public class JwtUtil {
     // adminId / memberId / adminRole / adminPart 를 토큰 안에 담음
     public String generateAccessToken(Long adminId, Long memberId, String adminRole, String adminPart) {
         return Jwts.builder()
-                .subject(String.valueOf(adminId))
+                .setSubject(String.valueOf(adminId))
                 .claim("memberId", memberId)
                 .claim("adminRole", adminRole)
                 .claim("adminPart", adminPart)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION))
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION))
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -44,11 +44,11 @@ public class JwtUtil {
 
     // 토큰에서 Claims(데이터) 꺼내기
     private Claims getClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
                 .build()
-                .parseSignedClaims(token)
-                .getPayload();
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     // 토큰에서 adminId 꺼내기
