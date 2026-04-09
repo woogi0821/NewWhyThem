@@ -1,6 +1,7 @@
 package com.simplecoding.chargerreservation.reservation.repository;
 
 import com.simplecoding.chargerreservation.reservation.entity.Reservation;
+import org.springframework.data.domain.Example;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -67,4 +68,5 @@ boolean isChargerCurrentlyOccupied(
     """)
     List<Reservation> findNoShowCancelTargets(@Param("targetTime") LocalDateTime targetTime);
 
+    Example<? extends Reservation> id(Long id);
 }

@@ -130,57 +130,57 @@ public class StationService {
                 }).collect(Collectors.toList());
     }
 
-    /**
-     * [기능] 충전소 상세 정보 단건 조회
-     * - 특정 마커를 클릭했을 때 해당 충전소 1개의 상세 정보를 가져옵니다.
-     * - 테스트 코드에서 호출하는 핵심 메서드입니다.
-     */
-    @Transactional(readOnly = true)
-    public StationDto getStationDetail(String statId, String type, String currentMonth) {
-        // 1. 올해와 작년 연도 계산
-        int currYear = LocalDate.now().getYear();
-        int lastYear = currYear - 1;
-
-        // 현재 계절 판별 (DTO의 로직을 활용하기 위해 month 전달)
-        String season = determineSeason(currentMonth);
-
-        // 2. [명령 하달] 충전소 정보와 요금 히스토리를 한 번에 조회 (리포지토리 방문)
-        List<Object[]> results = stationRepository.findStationDetailWithPriceHistory(
-                statId, type, season, currYear, lastYear
-        );
-
-        if (results.isEmpty()) {
-            throw new RuntimeException("해당 충전소 정보를 불러올 수 없습니다. ID: " + statId);
-        }
-
-        // 3. [데이터 추출] 0번 로우에서 엔티티를 꺼내 DTO로 변환
-        StationEntity entity = (StationEntity) results.get(0)[0];
-        StationDto dto = mapStruct.toDto(entity);
-
-        // 4. [요금 조립] 리스트를 돌며 올해/작년 요금을 찾아 DTO에 세팅
-        Double currPrice = null;
-        Double lastPrice = null;
-
-        for (Object[] row : results) {
-            ChargerPriceEntity priceEntity = (ChargerPriceEntity) row[1];
-            if (priceEntity.getApplyYear() == currYear) currPrice = ChargerPriceEntity.getPrice();
-            else if (priceEntity.getApplyYear() == lastYear) lastPrice = priceEntity.getPrice();
-        }
-
-        // 5. [올라가는 길] DTO 내부 로직 실행 (계절, 요금차이 계산)
-        dto.setPriceComparison(currPrice, lastPrice, Integer.parseInt(currentMonth));
-
-        // 6. [최종 반환] 모든 정보가 꽉 찬 DTO가 컨트롤러로 올라감
-        return dto;
-    }
-
-    // 계절 판별 보조 메서드
-    private String determineSeason(String monthStr) {
-        int month = Integer.parseInt(monthStr);
-        if (month >= 3 && month <= 5 || month >= 9 && month <= 11) return "봄/가을";
-        if (month >= 6 && month <= 8) return "여름";
-        return "겨울";
-    }
+//    /**
+//     * [기능] 충전소 상세 정보 단건 조회
+//     * - 특정 마커를 클릭했을 때 해당 충전소 1개의 상세 정보를 가져옵니다.
+//     * - 테스트 코드에서 호출하는 핵심 메서드입니다.
+//     */
+//    @Transactional(readOnly = true)
+//    public StationDto getStationDetail(String statId, String type, String currentMonth) {
+//        // 1. 올해와 작년 연도 계산
+//        int currYear = LocalDate.now().getYear();
+//        int lastYear = currYear - 1;
+//
+//        // 현재 계절 판별 (DTO의 로직을 활용하기 위해 month 전달)
+//        String season = determineSeason(currentMonth);
+//
+//        // 2. [명령 하달] 충전소 정보와 요금 히스토리를 한 번에 조회 (리포지토리 방문)
+//        List<Object[]> results = stationRepository.findStationDetailWithPriceHistory(
+//                statId, type, season, currYear, lastYear
+//        );
+//
+//        if (results.isEmpty()) {
+//            throw new RuntimeException("해당 충전소 정보를 불러올 수 없습니다. ID: " + statId);
+//        }
+//
+//        // 3. [데이터 추출] 0번 로우에서 엔티티를 꺼내 DTO로 변환
+//        StationEntity entity = (StationEntity) results.get(0)[0];
+//        StationDto dto = mapStruct.toDto(entity);
+//
+//        // 4. [요금 조립] 리스트를 돌며 올해/작년 요금을 찾아 DTO에 세팅
+//        Double currPrice = null;
+//        Double lastPrice = null;
+//
+//        for (Object[] row : results) {
+//            ChargerPriceEntity priceEntity = (ChargerPriceEntity) row[1];
+//            if (priceEntity.getApplyYear() == currYear) currPrice = ChargerPriceEntity.getPrice();
+//            else if (priceEntity.getApplyYear() == lastYear) lastPrice = priceEntity.getPrice();
+//        }
+//
+//        // 5. [올라가는 길] DTO 내부 로직 실행 (계절, 요금차이 계산)
+//        dto.setPriceComparison(currPrice, lastPrice, Integer.parseInt(currentMonth));
+//
+//        // 6. [최종 반환] 모든 정보가 꽉 찬 DTO가 컨트롤러로 올라감
+//        return dto;
+//    }
+//
+//    // 계절 판별 보조 메서드
+//    private String determineSeason(String monthStr) {
+//        int month = Integer.parseInt(monthStr);
+//        if (month >= 3 && month <= 5 || month >= 9 && month <= 11) return "봄/가을";
+//        if (month >= 6 && month <= 8) return "여름";
+//        return "겨울";
+//    }
     /**
      * [기능] 충전소 통합 검색
      * - 검색어(키워드)를 입력받아 충전소명이나 주소 등에서 일치하는 데이터를 찾습니다.

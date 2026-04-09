@@ -5,6 +5,7 @@ import com.simplecoding.chargerreservation.penalty.dto.PenaltyResponseDto;
 import com.simplecoding.chargerreservation.penalty.entity.PenaltyHistory;
 import com.simplecoding.chargerreservation.penalty.repository.PenaltyRepository;
 import com.simplecoding.chargerreservation.reservation.entity.Reservation;
+import com.simplecoding.chargerreservation.reservation.repository.ReservationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ public class PenaltyService {
 
     private final PenaltyRepository penaltyRepository;
     private final SmsService smsService;
+    private final ReservationRepository reservationRepository;
 
     //      1. 패널티 등록 및 문자 발송 (단계별 처리)
     @Transactional
