@@ -93,12 +93,12 @@ public interface StationRepository extends JpaRepository<StationEntity, String> 
      * - 규칙 3: 올해와 작년 요금을 한 번에 가져와서 비교할 수 있게 함
      */
     @Query("SELECT s, p FROM StationEntity s " +
-            "LEFT JOIN ChargerPriceEntity p ON s.bnm = p.bnm " + // 규칙 1: 운영사 일치
+            "LEFT JOIN ChargerPriceEntity p ON s.bnm = p.bnm " +
             "WHERE s.statId = :statId " +
             "AND p.speedType = :type " +
             "AND p.season = :season " +
-            "AND p.applyYear IN (:currYear, :lastYear) " +
-            "ORDER BY p.applyYear DESC") // 올해 데이터가 리스트의 처음에 오도록 정렬
+            "AND (p.applyYear = :currYear OR p.applyYear = :lastYear) " +
+            "ORDER BY p.applyYear DESC")
     List<Object[]> findStationDetailWithPriceHistory(
             @Param("statId") String statId,
             @Param("type") String type,
