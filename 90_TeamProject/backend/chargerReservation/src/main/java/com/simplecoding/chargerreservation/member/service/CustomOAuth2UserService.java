@@ -56,7 +56,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         Member member = memberRepository.findByProviderAndProviderId(attributes.getProvider(), attributes.getProviderId())
             .map(entity -> {
-                entity.updateSocialInfo(attributes.getName());
+                entity.updateSocialInfo(attributes.getName(),"");
                 return entity;
             })
             .orElseGet(attributes::toEntity);
