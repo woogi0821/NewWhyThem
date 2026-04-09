@@ -1,20 +1,20 @@
 package com.simplecoding.chargerreservation.charger.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-<<<<<<< HEAD
+
 import lombok.*;
 
 /**
  * 공공 API 응답 필드와 DB 컬럼 사이를 이어주는 DTO
  */
-=======
+
 import com.simplecoding.chargerreservation.charger.entity.ChargerEntity;
 import lombok.*;
 
 import java.util.Map;
 import java.util.Set;
 
->>>>>>> origin/Test_Table
+
 @Getter
 @Setter
 @ToString
@@ -23,7 +23,7 @@ import java.util.Set;
 @Builder
 public class ChargerDto {
 
-<<<<<<< HEAD
+
     @JsonProperty("statId")
     private String statId;      // STAT_ID
 
@@ -61,7 +61,7 @@ public class ChargerDto {
     // DB 관리용 시간 (API 응답에는 없으므로 JsonProperty 생략)
     private String createdAt;
     private String updatedAt;
-=======
+
     // 1. 메모리 최적화: 급속 타입 코드를 상수로 선언 (객체 재생성 방지)
     private static final Set<String> FAST_TYPES = Set.of("01", "03", "04", "05", "06", "08");
 
@@ -136,5 +136,5 @@ public class ChargerDto {
                 .chargerTypeNm(fast ? "급속" : "완속")
                 .build();
     }
->>>>>>> origin/Test_Table
+
 }

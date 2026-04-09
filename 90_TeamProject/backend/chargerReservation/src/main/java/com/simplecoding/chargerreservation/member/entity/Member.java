@@ -52,9 +52,11 @@ public class Member extends BaseTimeEntity {
     private	LocalDateTime suspendedUntil;
 
     // 소셜 로그인 사용자 정보 업데이트 메서드(더티체킹용)
-    public Member updateSocialInfo(String name) {
+    public Member updateSocialInfo(String name, String phone) {
         this.name = name;
-
+        if (phone != null) {
+            this.phone = phone;
+        }
         return this;
     }
 
