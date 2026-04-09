@@ -1,5 +1,5 @@
 import { useState } from "react";
-//import {Button} from "../common" //Button 컴포넌트가 완성되면 받아올것
+import {Button} from "../../components/common/Button" //Button 컴포넌트가 완성되면 받아올것
 
 interface KioskPinPadProps {
     //Pin번호의 최대 길이
@@ -41,7 +41,7 @@ export const KioskPinPad = ({maxLength = 4 , onComplete} : KioskPinPadProps) => 
                 {[1,2,3,4,5,6,7,8,9].map((num)=>
                 (<Button                    
                     key={num}
-                    variant = "secondary"
+                    variant = "primary"
                     size="lg"
                     onClick={()=> handleNumberClick(num.toString())}>
                         {num}
@@ -50,7 +50,7 @@ export const KioskPinPad = ({maxLength = 4 , onComplete} : KioskPinPadProps) => 
             <Button variant="danger" size="lg" onClick={handleClear}>
             전체삭제
             </Button>
-            <Button variant="secondary" size="lg" onClick={()=>handleNumberClick("0")}>
+            <Button variant="primary" size="lg" onClick={()=>handleNumberClick("0")}>
                 0
             </Button>
             <Button variant="outline" size="lg" onClick={handleDelete}>
