@@ -68,5 +68,5 @@ boolean isChargerCurrentlyOccupied(
     """)
     List<Reservation> findNoShowCancelTargets(@Param("targetTime") LocalDateTime targetTime);
 
-    Example<? extends Reservation> id(Long id);
+//    Example<? extends Reservation> id(Long id);
 }

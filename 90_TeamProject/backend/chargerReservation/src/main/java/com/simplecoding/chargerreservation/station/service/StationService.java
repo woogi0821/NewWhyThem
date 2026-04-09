@@ -130,11 +130,11 @@ public class StationService {
                 }).collect(Collectors.toList());
     }
 
-//    /**
-//     * [기능] 충전소 상세 정보 단건 조회
-//     * - 특정 마커를 클릭했을 때 해당 충전소 1개의 상세 정보를 가져옵니다.
-//     * - 테스트 코드에서 호출하는 핵심 메서드입니다.
-//     */
+    /**
+     * [기능] 충전소 상세 정보 단건 조회
+     * - 특정 마커를 클릭했을 때 해당 충전소 1개의 상세 정보를 가져옵니다.
+     * - 테스트 코드에서 호출하는 핵심 메서드입니다.
+     */
 //    @Transactional(readOnly = true)
 //    public StationDto getStationDetail(String statId, String type, String currentMonth) {
 //        // 1. 올해와 작년 연도 계산
