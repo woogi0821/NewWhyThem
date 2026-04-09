@@ -33,7 +33,8 @@ interface ToastProps extends Omit<HTMLAttributes<HTMLDivElement>, "children"> {
   // 토스트 종류 (기본값: "info")
   variant?: ToastVariant;
 
-  // 토스트 위치 (기본값: "top-right")
+  // 토스트 위치 (기본값: "bottom-center")
+  // 시안 기준 하단 중앙 고정
   position?: ToastPosition;
 
   // 토스트 표시 여부 - Boolean이므로 필수 규칙에 따라 is 접두사 사용
@@ -57,8 +58,13 @@ interface ToastProps extends Omit<HTMLAttributes<HTMLDivElement>, "children"> {
 // ─────────────────────────────────────────────
 
 // variant별 Tailwind CSS 클래스를 딕셔너리(객체)로 관리
-// 시안 디자인에 맞게 테슬라 레드(#cc0000) 계열을 포인트로 사용
-// 흰 배경 + 좌측 컬러 보더 라인으로 언더라인 스타일과 통일감 있게 구성
+// 시안 기준:
+// - 알약형 (rounded-full)
+// - 어두운 배경 + 흰 텍스트
+// - success → primary-dark (#1D4ED8)
+// - error   → red (#EF4444)
+// - warning → amber
+// - info    → dark (#0F172A)
 //
 // Record<ToastVariant, ...> 타입은 ToastVariant의 4가지 키가 모두 존재해야 함
 // 하나라도 빠지면 TypeScript 에러 → 실수 방지
@@ -67,68 +73,67 @@ const variantStyles: Record<
   { container: string; icon: string; iconPath: string }
 > = {
   success: {
-    // 흰 배경 + 좌측 초록 라인 (성공)
-    container: "bg-white border-l-4 border-l-green-600 border-t-0 border-r-0 border-b-0",
-    icon: "text-green-600",
+    // 시안의 primary-dark 색상 — 성공
+    container: "bg-[#1D4ED8] text-white",
+    icon: "text-white",
     // SVG path 데이터 (체크 원형 아이콘)
     iconPath: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
   },
   error: {
-    // 흰 배경 + 좌측 테슬라 레드 라인 — 시안의 포인트 컬러와 동일
-    container: "bg-white border-l-4 border-l-red-500 border-t-0 border-r-0 border-b-0",
-    icon: "text-red-500",
+    // 시안의 red 색상 — 실패 / 에러
+    container: "bg-[#EF4444] text-white",
+    icon: "text-white",
     // SVG path 데이터 (X 원형 아이콘)
     iconPath:
       "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z",
   },
   warning: {
-    // 흰 배경 + 좌측 주황 라인 (경고)
-    container: "bg-white border-l-4 border-l-yellow-500 border-t-0 border-r-0 border-b-0",
-    icon: "text-yellow-500",
+    // 경고 — amber 계열
+    container: "bg-[#F59E0B] text-white",
+    icon: "text-white",
     // SVG path 데이터 (삼각형 경고 아이콘)
     iconPath:
       "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z",
   },
   info: {
-    // 흰 배경 + 좌측 회색 라인 (안내)
-    container: "bg-white border-l-4 border-l-blue-500 border-t-0 border-r-0 border-b-0",
-    icon: "text-blue-500",
+    // 안내 — 시안의 어두운 텍스트색 (#0F172A)
+    container: "bg-[#0F172A] text-white",
+    icon: "text-white",
     // SVG path 데이터 (i 원형 아이콘)
     iconPath: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
   },
 };
 
 // position별 Tailwind CSS 위치 클래스를 딕셔너리로 관리
-// top-center / bottom-center는 수평 중앙 정렬을 위해
-// left-1/2 + -translate-x-1/2 조합을 사용
+// 시안 기준 기본값은 bottom-center
 const positionStyles: Record<ToastPosition, string> = {
-  "top-right": "top-4 right-4",
-  "top-center": "top-4 left-1/2 -translate-x-1/2",
-  "top-left": "top-4 left-4",
-  "bottom-right": "bottom-4 right-4",
-  "bottom-center": "bottom-4 left-1/2 -translate-x-1/2",
-  "bottom-left": "bottom-4 left-4",
+  "top-right":     "top-8 right-8",
+  "top-center":    "top-8 left-1/2 -translate-x-1/2",
+  "top-left":      "top-8 left-8",
+  "bottom-right":  "bottom-8 right-8",
+  "bottom-center": "bottom-8 left-1/2 -translate-x-1/2",
+  "bottom-left":   "bottom-8 left-8",
 };
 
 // 모든 variant에 공통으로 적용되는 뼈대 스타일
-// - fixed        : 스크롤에 영향 없이 화면에 고정
-// - z-50         : 다른 요소들 위에 떠 있도록 z-index 설정
-// - flex / gap   : 아이콘 + 텍스트 + 닫기버튼 가로 배치
-// - shadow-md    : 시안의 카드 느낌과 통일감 있게 그림자 적용
-// - rounded-none : 시안의 각진 스타일에 맞게 둥글기 제거
-// - transition   : isVisible 변경 시 부드러운 애니메이션
+// 시안 기준:
+// - rounded-full  : 알약형
+// - px-6 py-3     : 시안의 padding:11px 22px 과 유사
+// - shadow-lg     : 시안의 box-shadow 와 유사
+// - transition    : isVisible 변경 시 부드러운 애니메이션
+// - whitespace-nowrap : 시안처럼 한 줄로 유지
 const baseStyle =
-  "fixed z-50 flex items-center gap-3 px-5 py-4 rounded-none shadow-md min-w-[280px] max-w-sm transition-all duration-300 border";
+  "fixed z-50 flex items-center gap-2 px-6 py-3 rounded-full shadow-lg font-bold text-sm whitespace-nowrap transition-all duration-300";
 
 // ─────────────────────────────────────────────
 // 컴포넌트
 // ─────────────────────────────────────────────
 
 export const Toast = ({
-  variant = "info",        // 기본값: info
-  position = "top-right",  // 기본값: 우상단
-  isVisible = true,        // 기본값: 보임
-  hasCloseButton = true,   // 기본값: 닫기버튼 있음
+  variant = "info",           // 기본값: info
+  position = "bottom-center", // 기본값: 하단 중앙 (시안 기준)
+  isVisible = true,           // 기본값: 보임
+  hasCloseButton = false,     // 시안에는 닫기버튼 없음 — 기본값 false
   children,
   onClose,
   className = "",
@@ -141,10 +146,11 @@ export const Toast = ({
   const { container, icon, iconPath } = variantStyles[variant];
 
   // 최종 className 조합
-  // 1) baseStyle      : 공통 뼈대
-  // 2) container      : variant별 색상 + 좌측 라인
+  // 1) baseStyle      : 공통 뼈대 (알약형 등)
+  // 2) container      : variant별 배경색 + 텍스트색
   // 3) positionStyles : position별 위치
-  // 4) 애니메이션     : isVisible이 true면 보임, false면 위로 사라짐
+  // 4) 애니메이션     : isVisible이 true면 보임, false면 아래로 사라짐
+  //                     시안처럼 아래에서 올라오는 애니메이션
   // 5) className      : 외부에서 추가로 전달한 클래스 (확장 가능)
   const combinedClassName = `
     ${baseStyle}
@@ -153,7 +159,7 @@ export const Toast = ({
     ${
       isVisible
         ? "opacity-100 translate-y-0"                    // 보이는 상태
-        : "opacity-0 -translate-y-2 pointer-events-none" // 숨김 상태 (클릭도 막음)
+        : "opacity-0 translate-y-4 pointer-events-none"  // 숨김 상태 — 아래로 사라짐
     }
     ${className}
   `;
@@ -167,7 +173,7 @@ export const Toast = ({
       {/* 아이콘 영역 */}
       {/* aria-hidden="true": 아이콘은 장식용이라 스크린리더가 읽지 않도록 숨김 */}
       <svg
-        className={`w-5 h-5 shrink-0 ${icon}`}
+        className={`w-4 h-4 shrink-0 ${icon}`}
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -185,26 +191,24 @@ export const Toast = ({
       {/* 메시지 영역 */}
       {/* children으로 구멍을 뚫어뒀기 때문에 */}
       {/* 문자열이든 JSX든 자유롭게 넣을 수 있음 */}
-      <div className="flex-1 text-sm font-medium tracking-wide text-gray-700">
-        {children}
-      </div>
+      <span>{children}</span>
 
       {/* 닫기 버튼 */}
       {/* hasCloseButton이 false면 아예 렌더링하지 않음 */}
+      {/* 시안 기준 기본값 false — 자동으로만 닫힘 */}
       {hasCloseButton && (
         <button
           onClick={onClose}
-          aria-label="닫기" // 스크린리더용 버튼 설명
-          className="shrink-0 text-gray-300 hover:text-gray-500 transition-colors"
+          aria-label="닫기"
+          className="shrink-0 opacity-70 hover:opacity-100 transition-opacity ml-1"
         >
           <svg
-            className="w-4 h-4"
+            className="w-3.5 h-3.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
             aria-hidden="true"
           >
-            {/* X 아이콘 (두 대각선) */}
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
