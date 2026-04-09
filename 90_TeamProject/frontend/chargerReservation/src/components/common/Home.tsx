@@ -19,8 +19,10 @@ export default function Home() {
     try {
       // 1. 서버에 데이터를 보냅니다.
       const result = await sendPenaltySms({
-        reservationId: userData.id, // DB에서 가져온 진짜 예약 ID
+        receiver: userData.phone,
+        userName: userData.name,
         reason: userData.penaltyReason,
+        restrictUntil: userData.restrictUntil,
       });
 
       // 2. 성공했을 때 (서버 응답이 200 OK인 경우)

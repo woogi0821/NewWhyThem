@@ -1,6 +1,7 @@
 package com.simplecoding.chargerreservation.reservation.entity;
 
 import com.simplecoding.chargerreservation.common.BaseTimeEntity;
+import com.simplecoding.chargerreservation.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;

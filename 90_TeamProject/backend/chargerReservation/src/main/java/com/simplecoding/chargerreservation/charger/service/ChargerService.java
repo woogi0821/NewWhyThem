@@ -35,11 +35,11 @@ public class ChargerService {
 
         RestTemplate restTemplate = new RestTemplate();
         int pageNo = 1;
-<<<<<<< HEAD
+
         int numOfRows = 5000;
-=======
+
         int numOfRows = 8000;
->>>>>>> origin/Test_Table
+
         boolean hasMore = true;
         int totalUpdated = 0;
 
@@ -49,11 +49,11 @@ public class ChargerService {
                         .queryParam("serviceKey", serviceKey)
                         .queryParam("pageNo", pageNo)
                         .queryParam("numOfRows", numOfRows)
-<<<<<<< HEAD
+
                         .queryParam("period", 10)
-=======
+
                         .queryParam("period", 20)
->>>>>>> origin/Test_Table
+
                         .queryParam("dataType", "JSON")
                         .build(true).toUri();
 
@@ -112,7 +112,7 @@ public class ChargerService {
                 ps.setString(6, item.optString("statId").trim().toUpperCase());
                 ps.setString(7, item.optString("chgerId").trim().toUpperCase());
             }
-<<<<<<< HEAD
+
             @Override
             public int getBatchSize() { return items.length(); }
         });
@@ -122,7 +122,7 @@ public class ChargerService {
      * 공공 API 수집부터 DB MERGE까지 한 번에 처리
      */
     @Transactional
-=======
+
 
             @Override
             public int getBatchSize() {
@@ -136,17 +136,16 @@ public class ChargerService {
      * 공공 API 수집부터 DB MERGE까지 한 번에 처리
      */
 // 1. 클래스 상단 @Transactional은 제거하세요!
->>>>>>> origin/Test_Table
+
     public void collectAllChargerData() {
         String serviceKey = "6ebd5febab70800594860d7682eab328c14df15b1e1dfac30a7a011942ee6c3f";
         String url = "http://apis.data.go.kr/B552584/EvCharger/getChargerInfo";
 
         RestTemplate restTemplate = new RestTemplate();
-<<<<<<< HEAD
-=======
+
         // uniqueKeys는 메모리 폭발의 위험이 있으므로, 정말 중복이 심한 게 아니라면 제거를 고려하거나
         // 최소한의 필드만 담으세요. (여기서는 유지하되 buffer 관리를 철저히 합니다)
->>>>>>> origin/Test_Table
+
         Set<String> uniqueKeys = new HashSet<>();
         List<JSONObject> buffer = new ArrayList<>();
 
@@ -161,22 +160,19 @@ public class ChargerService {
 
         while (hasMore) {
             try {
-<<<<<<< HEAD
-=======
+
+
                 log.info("📡 API 호출 중... (페이지: {})", pageNo); // 진행 상황 로그 추가
 
->>>>>>> origin/Test_Table
+
                 URI uri = UriComponentsBuilder.fromHttpUrl(url)
                         .queryParam("serviceKey", serviceKey)
                         .queryParam("pageNo", pageNo)
                         .queryParam("numOfRows", numOfRows)
                         .queryParam("dataType", "JSON")
-<<<<<<< HEAD
                         .build(true)
                         .toUri();
-=======
                         .build(true).toUri();
->>>>>>> origin/Test_Table
 
                 String response = restTemplate.getForObject(uri, String.class);
                 if (response == null || !response.startsWith("{")) break;
@@ -202,11 +198,10 @@ public class ChargerService {
                     }
                 }
 
-<<<<<<< HEAD
+
                 if (buffer.size() >= 5000) {
                     saveToDb(buffer);
                     buffer.clear();
-=======
                 // 1,000개 단위로 즉시 저장하여 메모리 비우기
                 if (buffer.size() >= 5000) {
                     saveToDb(buffer);
@@ -214,7 +209,6 @@ public class ChargerService {
                     buffer.clear();
                     // 중간중간 메모리 정리를 위해 uniqueKeys가 너무 커지면 비워주는 전략도 필요할 수 있습니다.
                     if (uniqueKeys.size() > 100000) uniqueKeys.clear();
->>>>>>> origin/Test_Table
                 }
 
                 if (items.length() < numOfRows) hasMore = false;
@@ -229,7 +223,6 @@ public class ChargerService {
         if (!buffer.isEmpty()) {
             saveToDb(buffer);
         }
-<<<<<<< HEAD
     }
 
     /**
@@ -243,7 +236,6 @@ public class ChargerService {
                 "WHEN NOT MATCHED THEN INSERT " +
                 "(STAT_ID, CHARGER_ID, CHARGER_TYPE, STAT, STAT_UPD_DT, OUTPUT, METHOD, LAST_TSDT, LAST_TEDT, NOW_TSDT) " + // INSERT 컬럼 추가
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"; // VALUES 값 추가
-=======
         log.info("전체 수집 완료!");
     }
 
@@ -259,7 +251,6 @@ public class ChargerService {
                 "WHEN NOT MATCHED THEN INSERT " +
                 "(STAT_ID, CHARGER_ID, CHARGER_TYPE, STAT, STAT_UPD_DT, OUTPUT, METHOD, LAST_TSDT, LAST_TEDT, NOW_TSDT, CREATED_AT, UPDATED_AT) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, SYSDATE, SYSDATE)"; // CREATED_AT 등 추가
->>>>>>> origin/Test_Table
 
         jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
             @Override
@@ -268,33 +259,32 @@ public class ChargerService {
                 String sid = item.optString("statId").trim().toUpperCase();
                 String cid = item.optString("chgerId").trim().toUpperCase();
 
-<<<<<<< HEAD
                 // ON 조건 (1~2)
                 ps.setString(1, sid);
                 ps.setString(2, cid);
 
                 // UPDATE 필드 (3~10)
-=======
+
                 ps.setString(1, sid);
                 ps.setString(2, cid);
->>>>>>> origin/Test_Table
+
                 ps.setString(3, item.optString("chgerType"));
                 ps.setString(4, item.optString("stat", "9"));
                 ps.setString(5, item.optString("statUpdDt"));
                 ps.setInt(6, item.optInt("output", 0));
                 ps.setString(7, item.optString("method"));
-<<<<<<< HEAD
+
                 ps.setString(8, item.optString("lastTsdt", "")); // 추가
                 ps.setString(9, item.optString("lastTedt", "")); // 추가
                 ps.setString(10, item.optString("nowTsdt", "")); // 추가
 
                 // INSERT 필드 (11~20)
-=======
+
                 ps.setString(8, item.optString("lastTsdt", ""));
                 ps.setString(9, item.optString("lastTedt", ""));
                 ps.setString(10, item.optString("nowTsdt", ""));
 
->>>>>>> origin/Test_Table
+
                 ps.setString(11, sid);
                 ps.setString(12, cid);
                 ps.setString(13, item.optString("chgerType"));
@@ -302,15 +292,15 @@ public class ChargerService {
                 ps.setString(15, item.optString("statUpdDt"));
                 ps.setInt(16, item.optInt("output", 0));
                 ps.setString(17, item.optString("method"));
-<<<<<<< HEAD
+
                 ps.setString(18, item.optString("lastTsdt", "")); // 추가
                 ps.setString(19, item.optString("lastTedt", "")); // 추가
                 ps.setString(20, item.optString("nowTsdt", ""));  // 추가
-=======
+
                 ps.setString(18, item.optString("lastTsdt", ""));
                 ps.setString(19, item.optString("lastTedt", ""));
                 ps.setString(20, item.optString("nowTsdt", ""));
->>>>>>> origin/Test_Table
+
             }
 
             @Override
@@ -319,8 +309,7 @@ public class ChargerService {
             }
         });
     }
-<<<<<<< HEAD
+
     //endregion
-=======
->>>>>>> origin/Test_Table
+
 }

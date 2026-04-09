@@ -20,13 +20,10 @@ export const CheckBox = forwardRef<HTMLInputElement, CheckBoxProps>(
     const finalId = id || generatedId;
 
     // 1. 기본 뼈대 스타일 + 체크 아이콘 스타일 통합
-    // Tailwind의 대괄호 문법 [content:'✓']을 사용하여 별도의 CSS 없이 ✓ 표시를 구현합니다.
     const baseStyle = `
-      w-6 h-6 border-2 rounded-md transition-all cursor-pointer 
-      appearance-none flex-shrink-0 relative 
+      w-6 h-6 border-2 rounded-md transition-all cursor-pointer
+      appearance-none flex-shrink-0 relative
       focus:ring-2 focus:ring-offset-1 focus:outline-none
-      
-      /* 체크 아이콘 (작성하신 checkIconStyle을 Tailwind 클래스로 통합) */
       checked:after:content-['✓']
       checked:after:absolute
       checked:after:inset-0
@@ -38,23 +35,7 @@ export const CheckBox = forwardRef<HTMLInputElement, CheckBoxProps>(
       checked:after:font-bold
     `;
 
-    // 2. 모양(Shape) 딕셔너리
-    const shapeStyles = {
-      square: "rounded-md",
-      circle: "rounded-full",
-    };
-
-    // 3. 용도(Variant) 딕셔너리
-    const variantStyles = {
-      primary: "border-zinc-300 checked:bg-blue-500 checked:border-blue-500 focus:ring-blue-200 group-hover:border-blue-400",
-      danger: "border-red-200 checked:bg-red-500 checked:border-red-500 focus:ring-red-200 group-hover:border-red-400",
-    };
-
-    const statusStyle = "bg-white disabled:bg-zinc-100 disabled:border-zinc-200 disabled:cursor-not-allowed";
-
-    // 4. 최종 클래스명 조립 (뼈대 + 모양 + 색상)
-    const combinedInputClassName = `${baseStyle} ${shapeStyles[shape]} ${statusStyle} ${variantStyles[variant]} ${className}`;
-    // 2. 용도(variant)에 따른 테마 색상 딕셔너리
+    // 2. 용도(Variant) 딕셔너리 (프로젝트 테마 컬러: green)
     const variantStyles = {
       primary: "border-zinc-300 checked:bg-green-500 checked:border-green-500 focus:ring-green-200 group-hover:border-green-400",
       danger: "border-red-200 checked:bg-red-500 checked:border-red-500 focus:ring-red-200 group-hover:border-red-400",

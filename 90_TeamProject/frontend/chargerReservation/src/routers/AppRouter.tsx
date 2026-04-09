@@ -1,16 +1,12 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ChargerMain } from "../pages/mock/Kioskmain";
-import ToastTestPage from "../pages/admin/ToastTestPage";
+import { ChargerMain } from "../pages/mock/KioskPage";
 import AdminPage from "../pages/admin/Admin";
 import AdminMemberPage from "../pages/admin/AdminMemberPage";
 import AdminChargerPage from "../pages/admin/AdminChargerPage";
 import AdminReservationPage from "../pages/admin/AdminReservationPage";
 import AdminNoticePage from "../pages/admin/AdminNoticePage";
-
-// 🎯 추가된 임포트 (레이아웃 및 페이지)
-import MainLayout from "../layout/basic/basicLayout";
-// import { SearchPage } from "../pages/SearchPage";
 import { ReservationPage } from "../pages/reservation/ReservationPage";
+import { HomePage } from "../pages/home/HomePage";
 import Home from "../components/common/Home";
 
 export const AppRouter = () => {
@@ -18,38 +14,22 @@ export const AppRouter = () => {
     <BrowserRouter>
       <Routes>
         {/* ==========================================
-                    1. 일반 사용자 영역 (MainLayout의 헤더/푸터가 적용됨)
-                   ========================================== */}
-        <Route path="/" element={<MainLayout />}>
-          {/* 메인 홈 (기존에 path="/"에 있던 div를 여기로 옮겼습니다) */}
-          <Route
-            index
-            element={
-              <div className="p-10 text-2xl font-bold">
-                여기는 일반 웹/앱 메인 화면입니다. 키오스크는 /kiosk 로
-                이동하세요!
-                <a href="/test-sms" className="text-blue-500 underline text-lg">
-                  👉 SMS 발송 테스트 페이지로 가기
-                </a>
-              </div>
-            }
-          />
-          {/* 검색 페이지 연결
-                    <Route path="search" element={<SearchPage />} /> */}
-          {/* 예약 페이지 연결 🎯 */}
-          <Route path="reservation" element={<ReservationPage />} />
-        </Route>
-    
-  {/* 메인 주소에서도 Home이 나오게 */}
-  <Route path="/" element={<Home />} />
-  {/* 테스트용 주소에서도 Home이 나오게 */}
-  <Route path="/test-sms" element={<Home />} />
+            1. 일반 사용자 영역
+           ========================================== */}
+
+        {/* 메인 홈 — ChargeNow 디자인 시안 기반 */}
+        <Route path="/" element={<HomePage />} />
+
+        {/* 예약 페이지 */}
+        <Route path="/reservation" element={<ReservationPage />} />
+
+        {/* SMS 테스트 페이지 (기존 유지) */}
+        <Route path="/test-sms" element={<Home />} />
 
         {/* ==========================================
                     2. 독립 영역 (키오스크 및 테스트/관리자)
                    ========================================== */}
         <Route path="kiosk" element={<ChargerMain />} />
-        <Route path="/toast-test" element={<ToastTestPage />} />
 
         {/* 관리자 페이지들 (팀장님 기존 코드 유지) */}
         <Route path="/admin" element={<AdminPage />} />
