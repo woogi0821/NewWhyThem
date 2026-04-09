@@ -10,9 +10,11 @@ import com.simplecoding.chargerreservation.common.JwtUtil;
 import com.simplecoding.chargerreservation.member.entity.Member;
 import com.simplecoding.chargerreservation.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,12 +31,6 @@ public class AdminService {
     private final PasswordEncoder passwordEncoder;
 
     // ── 관리자 로그인 ────────────────────────────
-    // 1. loginId 로 MEMBER 테이블에서 회원 조회
-    // 2. BCrypt 비밀번호 비교
-    // 3. STATUS 가 ACTIVE 인지 확인
-    // 4. 정지 기간 확인
-    // 5. ADMIN 테이블에서 해당 MEMBER_ID 확인
-    // 6. JWT 토큰 발급 후 반환
     public AdminLoginResponseDto login(AdminLoginRequestDto dto) {
 
         Member member = memberRepository.findByLoginId(dto.getLoginId())
@@ -56,16 +52,20 @@ public class AdminService {
         Admin admin = adminRepository.findByMemberId(member.getMemberId())
                 .orElseThrow(() -> new RuntimeException("관리자 권한이 없습니다"));
 
+        // JWT 토큰 발급 — adminPart 포함
         String accessToken = jwtUtil.generateAccessToken(
                 admin.getAdminId(),
                 member.getMemberId(),
-                admin.getAdminRole()
+                admin.getAdminRole(),
+                admin.getAdminPart()
         );
 
+        // 토큰 + 역할 + adminId + adminPart 반환
         return new AdminLoginResponseDto(
                 accessToken,
                 admin.getAdminRole(),
-                admin.getAdminId()
+                admin.getAdminId(),
+                admin.getAdminPart()
         );
     }
 
@@ -136,43 +136,52 @@ public class AdminService {
         return AdminDto.from(adminRepository.save(target));
     }
 
-    // ── 회원 전체 목록 조회 ──────────────────────
-    // MEMBER 테이블 전체 조회
-    // AdminMemberDto 로 변환해서 반환
+    // ── 회원 전체 목록 조회 (SUPER + MEMBER 파트만 가능) ──
     @Transactional(readOnly = true)
-    public List<AdminMemberDto> getMemberList() {
+    public List<AdminMemberDto> getMemberList(Long requesterId) {
 
-        // MEMBER 테이블 전체 조회
+        Admin requester = adminRepository.findById(requesterId)
+                .orElseThrow(() -> new RuntimeException("요청자를 찾을 수 없습니다"));
+
+        boolean isSuperRole = requester.getAdminRole().equals("SUPER");
+        boolean isMemberPart = requester.getAdminPart().equals("MEMBER");
+
+        if (!isSuperRole && !isMemberPart) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "접근 권한이 없습니다");
+        }
+
         return memberRepository.findAll()
                 .stream()
                 .map(AdminMemberDto::from)
                 .collect(Collectors.toList());
     }
 
-    // ── 회원 상태 변경 ───────────────────────────
-    // STATUS 변경 — ACTIVE / SUSPENDED / WITHDRAWN
-    // 정지 처리 시 SUSPENDED_UNTIL 24시간 설정
-    // 정지 해제 시 SUSPENDED_UNTIL null 로 초기화
-    public AdminMemberDto updateMemberStatus(Long memberId, String newStatus) {
+    // ── 회원 상태 변경 (SUPER + MEMBER 파트만 가능) ──
+    public AdminMemberDto updateMemberStatus(Long requesterId, Long memberId, String newStatus) {
 
-        // 회원 조회 — 없으면 예외 발생
+        Admin requester = adminRepository.findById(requesterId)
+                .orElseThrow(() -> new RuntimeException("요청자를 찾을 수 없습니다"));
+
+        boolean isSuperRole = requester.getAdminRole().equals("SUPER");
+        boolean isMemberPart = requester.getAdminPart().equals("MEMBER");
+
+        if (!isSuperRole && !isMemberPart) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "접근 권한이 없습니다");
+        }
+
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new RuntimeException("회원을 찾을 수 없습니다"));
 
-        // 상태 변경
         member.setStatus(newStatus);
 
-        // 정지 처리 시 24시간 정지 기간 설정
         if (newStatus.equals("SUSPENDED")) {
             member.setSuspendedUntil(LocalDateTime.now().plusHours(24));
         }
 
-        // 정지 해제 / 탈퇴 시 정지 기간 초기화
         if (newStatus.equals("ACTIVE") || newStatus.equals("WITHDRAWN")) {
             member.setSuspendedUntil(null);
         }
 
-        // 변경된 회원 정보 저장 후 반환
         return AdminMemberDto.from(memberRepository.save(member));
     }
 }

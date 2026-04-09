@@ -13,7 +13,6 @@ import java.util.Date;
 public class JwtUtil {
 
     // application.properties 에서 시크릿 키 주입
-    // application.properties 에서 시크릿 키 주입
     @Value("${jwt.secret-key}")
     private String secret;
 
@@ -28,12 +27,13 @@ public class JwtUtil {
     // ── 토큰 생성 ──────────────────────────────
 
     // 액세스 토큰 생성
-    // adminId, memberId, adminRole 을 토큰 안에 담음
-    public String generateAccessToken(Long adminId, Long memberId, String adminRole) {
+    // adminId / memberId / adminRole / adminPart 를 토큰 안에 담음
+    public String generateAccessToken(Long adminId, Long memberId, String adminRole, String adminPart) {
         return Jwts.builder()
                 .subject(String.valueOf(adminId))
                 .claim("memberId", memberId)
                 .claim("adminRole", adminRole)
+                .claim("adminPart", adminPart)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION))
                 .signWith(getSigningKey())
@@ -59,6 +59,11 @@ public class JwtUtil {
     // 토큰에서 adminRole 꺼내기
     public String getAdminRole(String token) {
         return getClaims(token).get("adminRole", String.class);
+    }
+
+    // 토큰에서 adminPart 꺼내기
+    public String getAdminPart(String token) {
+        return getClaims(token).get("adminPart", String.class);
     }
 
     // ── 토큰 검증 ──────────────────────────────

@@ -2,10 +2,6 @@ import { useState } from "react";
 import { AdminLayout } from "../../components/admin/AdminLayout";
 import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
 
-// ─────────────────────────────────────────────
-// 타입 정의
-// ─────────────────────────────────────────────
-
 interface Station {
   id: string;
   name: string;
@@ -25,10 +21,6 @@ interface ChargerForm {
   type: string;
   status: Charger["status"];
 }
-
-// ─────────────────────────────────────────────
-// 임시 데이터 (나중에 API 연결 시 교체)
-// ─────────────────────────────────────────────
 
 const STATIONS: Station[] = [
   { id: "s001", name: "강남 테헤란로점",     address: "서울 강남구 테헤란로 152", totalChargers: 3 },
@@ -51,10 +43,6 @@ const INITIAL_CHARGERS: Charger[] = [
   { id: "c010", stationId: "s005", type: "완속 7kW",   status: "error" },
 ];
 
-// ─────────────────────────────────────────────
-// 스타일 딕셔너리
-// ─────────────────────────────────────────────
-
 const chargerStatusStyles: {
   [key in "free" | "busy" | "error"]: {
     label: string;
@@ -67,23 +55,21 @@ const chargerStatusStyles: {
   error: { label: "고장",   dot: "bg-red-500",   badge: "bg-red-50 text-red-600"    },
 };
 
-// ─────────────────────────────────────────────
-// 폼 초기값
-// ─────────────────────────────────────────────
-
 const EMPTY_FORM: ChargerForm = {
   stationId: "",
   type: "급속 50kW",
   status: "free",
 };
 
-// ─────────────────────────────────────────────
-// 컴포넌트
-// ─────────────────────────────────────────────
+// 충전기 관리 수정 권한 체크
+// SUPER 또는 CHARGER 파트만 수정 가능
+const canEditCharger = (): boolean => {
+  const adminRole = localStorage.getItem("adminRole");
+  const adminPart = localStorage.getItem("adminPart");
+  return adminRole === "SUPER" || adminPart === "CHARGER";
+};
 
 const AdminChargerPage = () => {
-
-  // ── 상태 관리 ──────────────────────────────
 
   const [chargers, setChargers] = useState<Charger[]>(INITIAL_CHARGERS);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
@@ -91,19 +77,16 @@ const AdminChargerPage = () => {
   const [editCharger, setEditCharger] = useState<Charger | null>(null);
   const [form, setForm] = useState<ChargerForm>(EMPTY_FORM);
 
-  // ── 충전기 필터링 ───────────────────────────
+  // 수정 권한 여부
+  const hasEditPermission = canEditCharger();
 
   const filteredChargers = selectedStationId
     ? chargers.filter((c) => c.stationId === selectedStationId)
     : chargers;
 
-  // ── 상태별 집계 ─────────────────────────────
-
   const freeCount  = filteredChargers.filter((c) => c.status === "free").length;
   const busyCount  = filteredChargers.filter((c) => c.status === "busy").length;
   const errorCount = filteredChargers.filter((c) => c.status === "error").length;
-
-  // ── 모달 닫기 ───────────────────────────────
 
   const onCloseModal = () => {
     setModalMode(null);
@@ -111,17 +94,15 @@ const AdminChargerPage = () => {
     setForm(EMPTY_FORM);
   };
 
-  // ── 충전기 추가 모달 열기 ────────────────────
-
   const onOpenAddModal = () => {
+    if (!hasEditPermission) return;
     setForm(EMPTY_FORM);
     setEditCharger(null);
     setModalMode("add");
   };
 
-  // ── 충전기 수정 모달 열기 ────────────────────
-
   const onOpenEditModal = (charger: Charger) => {
+    if (!hasEditPermission) return;
     setForm({
       stationId: charger.stationId,
       type: charger.type,
@@ -131,16 +112,12 @@ const AdminChargerPage = () => {
     setModalMode("edit");
   };
 
-  // ── 충전기 추가 ─────────────────────────────
-
   const onAddCharger = () => {
     const newId = "c" + String(chargers.length + 1).padStart(3, "0");
     const newCharger: Charger = { id: newId, ...form };
     setChargers((prev) => [...prev, newCharger]);
     onCloseModal();
   };
-
-  // ── 충전기 수정 ─────────────────────────────
 
   const onEditCharger = () => {
     if (!editCharger) return;
@@ -150,9 +127,8 @@ const AdminChargerPage = () => {
     onCloseModal();
   };
 
-  // ── 충전기 삭제 ─────────────────────────────
-
   const onDeleteCharger = (id: string) => {
+    if (!hasEditPermission) return;
     if (!window.confirm("정말 삭제하시겠습니까?")) return;
     setChargers((prev) => prev.filter((c) => c.id !== id));
   };
@@ -160,26 +136,17 @@ const AdminChargerPage = () => {
   return (
     <AdminLayout adminName="홍길동">
 
-      {/* 페이지 제목 */}
       <AdminPageHeader title="충전소 / 충전기 관리" />
 
-      {/* ── 충전소 목록 ── */}
+      {/* 충전소 목록 */}
       <div className="bg-white border border-gray-100 shadow-sm mb-6">
-
-        {/* 섹션 헤더 */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            {/* 블루 포인트 라인 — 팀 시안 컬러 통일 */}
             <div className="w-1 h-4 bg-blue-700" />
-            <h2 className="text-sm font-semibold text-gray-700 tracking-wide">
-              충전소 목록
-            </h2>
-            <span className="text-xs text-gray-400">
-              총 {STATIONS.length}개소
-            </span>
+            <h2 className="text-sm font-semibold text-gray-700 tracking-wide">충전소 목록</h2>
+            <span className="text-xs text-gray-400">총 {STATIONS.length}개소</span>
           </div>
         </div>
-
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -192,28 +159,18 @@ const AdminChargerPage = () => {
             </thead>
             <tbody>
               {STATIONS.map((station) => (
-                <tr
-                  key={station.id}
-                  className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
-                >
+                <tr key={station.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-3 text-gray-700 font-medium">{station.name}</td>
                   <td className="px-5 py-3 text-gray-500">{station.address}</td>
                   <td className="px-5 py-3 text-gray-500">{station.totalChargers}대</td>
                   <td className="px-5 py-3">
-                    {/* 충전소 선택 시 해당 충전소 충전기만 필터링 */}
                     <button
-                      onClick={() =>
-                        setSelectedStationId(
-                          selectedStationId === station.id ? null : station.id
-                        )
-                      }
-                      className={`
-                        text-xs px-3 py-1 border transition-colors
+                      onClick={() => setSelectedStationId(selectedStationId === station.id ? null : station.id)}
+                      className={`text-xs px-3 py-1 border transition-colors
                         ${selectedStationId === station.id
                           ? "border-blue-700 text-blue-700 bg-blue-50"
                           : "border-gray-200 text-gray-400 hover:border-blue-700 hover:text-blue-700"
-                        }
-                      `}
+                        }`}
                     >
                       {selectedStationId === station.id ? "필터 해제" : "필터"}
                     </button>
@@ -225,46 +182,41 @@ const AdminChargerPage = () => {
         </div>
       </div>
 
-      {/* ── 충전기 현황 ── */}
+      {/* 충전기 현황 */}
       <div className="bg-white border border-gray-100 shadow-sm">
-
-        {/* 섹션 헤더 */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              {/* 블루 포인트 라인 — 팀 시안 컬러 통일 */}
               <div className="w-1 h-4 bg-blue-700" />
-              <h2 className="text-sm font-semibold text-gray-700 tracking-wide">
-                충전기 현황
-              </h2>
+              <h2 className="text-sm font-semibold text-gray-700 tracking-wide">충전기 현황</h2>
             </div>
-            {/* 상태별 요약 */}
             <div className="flex items-center gap-3 text-xs text-gray-500">
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
-                가용 {freeCount}대
+                <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />가용 {freeCount}대
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
-                사용중 {busyCount}대
+                <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />사용중 {busyCount}대
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
-                고장 {errorCount}대
+                <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />고장 {errorCount}대
               </span>
             </div>
           </div>
 
-          {/* 충전기 추가 버튼 */}
+          {/* 충전기 추가 버튼 — 권한 없으면 비활성화 */}
           <button
             onClick={onOpenAddModal}
-            className="px-4 py-2 text-xs text-white bg-blue-700 hover:bg-blue-800 transition-colors"
+            disabled={!hasEditPermission}
+            className={`px-4 py-2 text-xs transition-colors
+              ${hasEditPermission
+                ? "text-white bg-blue-700 hover:bg-blue-800"
+                : "text-gray-300 bg-gray-100 cursor-not-allowed"
+              }`}
           >
             + 충전기 추가
           </button>
         </div>
 
-        {/* 충전기 테이블 */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -287,38 +239,40 @@ const AdminChargerPage = () => {
                 filteredChargers.map((charger) => {
                   const style = chargerStatusStyles[charger.status];
                   const stationName = STATIONS.find((s) => s.id === charger.stationId)?.name ?? "-";
-
                   return (
-                    <tr
-                      key={charger.id}
-                      className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
-                    >
+                    <tr key={charger.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                       <td className="px-5 py-3 text-gray-400">{charger.id}</td>
                       <td className="px-5 py-3 text-gray-700 font-medium">{stationName}</td>
                       <td className="px-5 py-3 text-gray-600">{charger.type}</td>
                       <td className="px-5 py-3">
-                        <span className={`
-                          inline-flex items-center gap-1.5
-                          px-2 py-1 text-xs font-medium rounded-sm
-                          ${style.badge}
-                        `}>
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-sm ${style.badge}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
                           {style.label}
                         </span>
                       </td>
+
+                      {/* 수정 / 삭제 버튼 — 권한 없으면 비활성화 */}
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
-                          {/* 수정 버튼 */}
                           <button
                             onClick={() => onOpenEditModal(charger)}
-                            className="text-xs text-blue-500 hover:text-blue-700 transition-colors"
+                            disabled={!hasEditPermission}
+                            className={`text-xs transition-colors
+                              ${hasEditPermission
+                                ? "text-blue-500 hover:text-blue-700"
+                                : "text-gray-300 cursor-not-allowed"
+                              }`}
                           >
                             수정
                           </button>
-                          {/* 삭제 버튼 */}
                           <button
                             onClick={() => onDeleteCharger(charger.id)}
-                            className="text-xs text-red-500 hover:text-red-700 transition-colors"
+                            disabled={!hasEditPermission}
+                            className={`text-xs transition-colors
+                              ${hasEditPermission
+                                ? "text-red-500 hover:text-red-700"
+                                : "text-gray-300 cursor-not-allowed"
+                              }`}
                           >
                             삭제
                           </button>
@@ -333,37 +287,20 @@ const AdminChargerPage = () => {
         </div>
       </div>
 
-      {/* ── 충전기 추가 / 수정 통합 모달 ── */}
+      {/* 충전기 추가 / 수정 모달 */}
       {modalMode !== null && (
-        <div
-          className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
-          onClick={onCloseModal}
-        >
-          <div
-            className="bg-white w-full max-w-sm mx-4 shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* 모달 헤더 */}
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center" onClick={onCloseModal}>
+          <div className="bg-white w-full max-w-sm mx-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
-                {/* 블루 포인트 라인 */}
                 <div className="w-1 h-4 bg-blue-700" />
                 <h3 className="text-sm font-semibold text-gray-700">
                   {modalMode === "add" ? "충전기 추가" : "충전기 수정"}
                 </h3>
               </div>
-              <button
-                onClick={onCloseModal}
-                className="text-gray-300 hover:text-gray-500 transition-colors"
-              >
-                ✕
-              </button>
+              <button onClick={onCloseModal} className="text-gray-300 hover:text-gray-500 transition-colors">✕</button>
             </div>
-
-            {/* 모달 폼 */}
             <div className="px-6 py-5 space-y-4">
-
-              {/* 충전소 선택 */}
               <div>
                 <label className="block text-xs text-gray-400 tracking-wide mb-1">충전소</label>
                 <select
@@ -377,8 +314,6 @@ const AdminChargerPage = () => {
                   ))}
                 </select>
               </div>
-
-              {/* 충전기 타입 */}
               <div>
                 <label className="block text-xs text-gray-400 tracking-wide mb-1">타입</label>
                 <select
@@ -391,8 +326,6 @@ const AdminChargerPage = () => {
                   <option value="완속 7kW">완속 7kW</option>
                 </select>
               </div>
-
-              {/* 상태 */}
               <div>
                 <label className="block text-xs text-gray-400 tracking-wide mb-1">상태</label>
                 <select
@@ -406,8 +339,6 @@ const AdminChargerPage = () => {
                 </select>
               </div>
             </div>
-
-            {/* 모달 하단 버튼 */}
             <div className="flex gap-2 px-6 py-4 border-t border-gray-100">
               <button
                 onClick={modalMode === "add" ? onAddCharger : onEditCharger}

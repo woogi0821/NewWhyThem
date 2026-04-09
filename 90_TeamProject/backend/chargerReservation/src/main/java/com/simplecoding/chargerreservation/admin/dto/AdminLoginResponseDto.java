@@ -17,4 +17,7 @@ public class AdminLoginResponseDto {
 
     // 어드민 ID
     private Long adminId;
+
+    // 담당 파트 — ALL / MEMBER / RESERVATION / CHARGER / INQUIRY
+    private String adminPart;
 }

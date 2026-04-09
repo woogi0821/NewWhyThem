@@ -68,23 +68,23 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── 회원 전체 목록 조회 ──────────────────────
-    // GET /api/admins/members
-    // 전체 회원 목록 반환
+    // ── 회원 전체 목록 조회 (SUPER + MEMBER 파트만 가능) ──
+    // GET /api/admins/members?requesterId=1
     @GetMapping("/members")
-    public ResponseEntity<List<AdminMemberDto>> getMemberList() {
-        return ResponseEntity.ok(adminService.getMemberList());
+    public ResponseEntity<List<AdminMemberDto>> getMemberList(
+            @RequestParam Long requesterId) {
+        return ResponseEntity.ok(adminService.getMemberList(requesterId));
     }
 
-    // ── 회원 상태 변경 ───────────────────────────
-    // PATCH /api/admins/members/{memberId}?newStatus=SUSPENDED
-    // newStatus : ACTIVE / SUSPENDED / WITHDRAWN
+    // ── 회원 상태 변경 (SUPER + MEMBER 파트만 가능) ──
+    // PATCH /api/admins/members/{memberId}?requesterId=1&newStatus=SUSPENDED
     @PatchMapping("/members/{memberId}")
     public ResponseEntity<AdminMemberDto> updateMemberStatus(
+            @RequestParam Long requesterId,
             @PathVariable Long memberId,
             @RequestParam String newStatus) {
         return ResponseEntity.ok(
-                adminService.updateMemberStatus(memberId, newStatus)
+                adminService.updateMemberStatus(requesterId, memberId, newStatus)
         );
     }
 }

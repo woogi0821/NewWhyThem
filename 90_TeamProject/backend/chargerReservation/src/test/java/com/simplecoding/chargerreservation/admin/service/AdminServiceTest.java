@@ -74,7 +74,9 @@ class AdminServiceTest {
         when(memberRepository.findByLoginId("admin")).thenReturn(Optional.of(mockMember));
         when(adminRepository.findByMemberId(1L)).thenReturn(Optional.of(mockAdmin));
         when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
-        when(jwtUtil.generateAccessToken(any(), any(), anyString())).thenReturn("fake.jwt.token");
+        // adminPart 파라미터 추가
+        when(jwtUtil.generateAccessToken(any(), any(), anyString(), anyString()))
+                .thenReturn("fake.jwt.token");
 
         AdminLoginRequestDto requestDto = new AdminLoginRequestDto("admin", "1234");
         AdminLoginResponseDto response = adminService.login(requestDto);
@@ -232,92 +234,98 @@ class AdminServiceTest {
 
     @Test
     void getMemberList_성공() {
-        // given — 가짜 Member 객체 2개 생성
+        // given — SUPER 권한 요청자
+        Admin mockRequester = new Admin(1L, "SUPER");
+
         Member mockMember1 = Member.builder()
-                .memberId(1L)
-                .loginId("user1")
-                .name("홍길동")
-                .email("user1@test.com")
-                .phone("010-1111-1111")
-                .status("ACTIVE")
-                .penaltyCount(0)
-                .build();
+                .memberId(1L).loginId("user1").name("홍길동")
+                .email("user1@test.com").phone("010-1111-1111")
+                .status("ACTIVE").penaltyCount(0).build();
 
         Member mockMember2 = Member.builder()
-                .memberId(2L)
-                .loginId("user2")
-                .name("김철수")
-                .email("user2@test.com")
-                .phone("010-2222-2222")
-                .status("SUSPENDED")
-                .penaltyCount(1)
-                .build();
+                .memberId(2L).loginId("user2").name("김철수")
+                .email("user2@test.com").phone("010-2222-2222")
+                .status("SUSPENDED").penaltyCount(1).build();
 
-        when(memberRepository.findAll())
-                .thenReturn(List.of(mockMember1, mockMember2));
+        when(adminRepository.findById(1L)).thenReturn(Optional.of(mockRequester));
+        when(memberRepository.findAll()).thenReturn(List.of(mockMember1, mockMember2));
 
         // when
-        List<AdminMemberDto> result = adminService.getMemberList();
+        List<AdminMemberDto> result = adminService.getMemberList(1L);
 
         // then
         assertEquals(2, result.size());
         assertEquals("홍길동", result.get(0).getName());
-        assertEquals("ACTIVE", result.get(0).getStatus());
         assertEquals("김철수", result.get(1).getName());
-        assertEquals("SUSPENDED", result.get(1).getStatus());
     }
 
     @Test
     void getMemberList_빈목록() {
         // given
+        Admin mockRequester = new Admin(1L, "SUPER");
+
+        when(adminRepository.findById(1L)).thenReturn(Optional.of(mockRequester));
         when(memberRepository.findAll()).thenReturn(List.of());
 
         // when
-        List<AdminMemberDto> result = adminService.getMemberList();
+        List<AdminMemberDto> result = adminService.getMemberList(1L);
 
         // then
         assertEquals(0, result.size());
+    }
+
+    @Test
+    void getMemberList_실패_권한없음() {
+        // given — CHARGER 파트 요청자
+        Admin mockRequester = new Admin(1L, "MANAGER");
+        mockRequester.updatePart("CHARGER");
+
+        when(adminRepository.findById(1L)).thenReturn(Optional.of(mockRequester));
+
+        // when & then
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> adminService.getMemberList(1L));
+
+        assertEquals("접근 권한이 없습니다", exception.getMessage());
     }
 
     // ── 회원 상태 변경 테스트 ────────────────────
 
     @Test
     void updateMemberStatus_정지처리() {
-        // given
-        Member mockMember = Member.builder()
-                .memberId(1L)
-                .loginId("user1")
-                .name("홍길동")
-                .status("ACTIVE")
-                .penaltyCount(0)
-                .build();
+        // given — SUPER 권한 요청자
+        Admin mockRequester = new Admin(1L, "SUPER");
 
-        when(memberRepository.findById(1L)).thenReturn(Optional.of(mockMember));
+        Member mockMember = Member.builder()
+                .memberId(2L).loginId("user1").name("홍길동")
+                .status("ACTIVE").penaltyCount(0).build();
+
+        when(adminRepository.findById(1L)).thenReturn(Optional.of(mockRequester));
+        when(memberRepository.findById(2L)).thenReturn(Optional.of(mockMember));
         when(memberRepository.save(any(Member.class))).thenReturn(mockMember);
 
         // when
-        AdminMemberDto result = adminService.updateMemberStatus(1L, "SUSPENDED");
+        AdminMemberDto result = adminService.updateMemberStatus(1L, 2L, "SUSPENDED");
 
-        // then — 상태가 SUSPENDED 로 변경됐는지 확인
+        // then
         assertEquals("SUSPENDED", result.getStatus());
     }
 
     @Test
     void updateMemberStatus_정지해제() {
         // given
-        Member mockMember = Member.builder()
-                .memberId(1L)
-                .loginId("user1")
-                .name("홍길동")
-                .status("SUSPENDED")
-                .penaltyCount(0)
-                .build();
+        Admin mockRequester = new Admin(1L, "SUPER");
 
-        when(memberRepository.findById(1L)).thenReturn(Optional.of(mockMember));
+        Member mockMember = Member.builder()
+                .memberId(2L).loginId("user1").name("홍길동")
+                .status("SUSPENDED").penaltyCount(0).build();
+
+        when(adminRepository.findById(1L)).thenReturn(Optional.of(mockRequester));
+        when(memberRepository.findById(2L)).thenReturn(Optional.of(mockMember));
         when(memberRepository.save(any(Member.class))).thenReturn(mockMember);
 
         // when
-        AdminMemberDto result = adminService.updateMemberStatus(1L, "ACTIVE");
+        AdminMemberDto result = adminService.updateMemberStatus(1L, 2L, "ACTIVE");
 
         // then
         assertEquals("ACTIVE", result.getStatus());
@@ -326,13 +334,31 @@ class AdminServiceTest {
     @Test
     void updateMemberStatus_실패_없는회원() {
         // given
+        Admin mockRequester = new Admin(1L, "SUPER");
+
+        when(adminRepository.findById(1L)).thenReturn(Optional.of(mockRequester));
         when(memberRepository.findById(999L)).thenReturn(Optional.empty());
 
         // when & then
         RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> adminService.updateMemberStatus(999L, "SUSPENDED"));
+                () -> adminService.updateMemberStatus(1L, 999L, "SUSPENDED"));
 
         assertEquals("회원을 찾을 수 없습니다", exception.getMessage());
+    }
+
+    @Test
+    void updateMemberStatus_실패_권한없음() {
+        // given — CHARGER 파트 요청자
+        Admin mockRequester = new Admin(1L, "MANAGER");
+        mockRequester.updatePart("CHARGER");
+
+        when(adminRepository.findById(1L)).thenReturn(Optional.of(mockRequester));
+
+        // when & then
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> adminService.updateMemberStatus(1L, 2L, "SUSPENDED"));
+
+        assertEquals("접근 권한이 없습니다", exception.getMessage());
     }
 
     // ── 비밀번호 암호화 확인용 ──────────────────

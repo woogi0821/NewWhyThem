@@ -2,12 +2,6 @@ import { useState } from "react";
 import { AdminLayout } from "../../components/admin/AdminLayout";
 import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
 
-// ─────────────────────────────────────────────
-// 타입 정의
-// ─────────────────────────────────────────────
-
-// 회원 한 명의 구조
-// status : active(정상) / suspended(정지) / withdrawn(탈퇴) 3가지로 제한
 interface Member {
   id: string;
   name: string;
@@ -16,10 +10,6 @@ interface Member {
   joinDate: string;
   status: "active" | "suspended" | "withdrawn";
 }
-
-// ─────────────────────────────────────────────
-// 임시 데이터 (나중에 API 연결 시 교체)
-// ─────────────────────────────────────────────
 
 const MEMBERS: Member[] = [
   { id: "m001", name: "김민준", email: "minjun@example.com",  phone: "010-1234-5678", joinDate: "2025.01.10", status: "active"    },
@@ -32,10 +22,6 @@ const MEMBERS: Member[] = [
   { id: "m008", name: "윤아름", email: "areum@example.com",   phone: "010-8901-2345", joinDate: "2025.05.18", status: "active"    },
 ];
 
-// ─────────────────────────────────────────────
-// 회원 상태별 스타일 딕셔너리
-// ─────────────────────────────────────────────
-
 const memberStatusStyles: {
   [key in "active" | "suspended" | "withdrawn"]: {
     label: string;
@@ -47,28 +33,28 @@ const memberStatusStyles: {
   withdrawn: { label: "탈퇴", badge: "bg-gray-100 text-gray-400"  },
 };
 
-// ─────────────────────────────────────────────
-// 컴포넌트
-// ─────────────────────────────────────────────
+// 회원관리 수정 권한 체크
+// SUPER 또는 MEMBER 파트만 수정 가능
+const canEditMember = (): boolean => {
+  const adminRole = localStorage.getItem("adminRole");
+  const adminPart = localStorage.getItem("adminPart");
+  return adminRole === "SUPER" || adminPart === "MEMBER";
+};
 
 const AdminMemberPage = () => {
-
-  // ── 상태 관리 ──────────────────────────────
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [members, setMembers] = useState<Member[]>(MEMBERS);
 
-  // ── 검색 필터링 ────────────────────────────
+  // 수정 권한 여부
+  const hasEditPermission = canEditMember();
 
   const filteredMembers = members.filter((m) =>
     m.name.includes(searchQuery) || m.email.includes(searchQuery)
   );
 
-  // ── 회원 상태 변경 함수 ────────────────────
-
   const onChangeStatus = (id: string, newStatus: Member["status"]) => {
-    // 탈퇴 처리일 때만 confirm 으로 한 번 더 확인
     if (newStatus === "withdrawn" && !window.confirm("정말 탈퇴 처리하시겠습니까?")) return;
 
     setMembers((prev) =>
@@ -82,43 +68,24 @@ const AdminMemberPage = () => {
   return (
     <AdminLayout adminName="홍길동">
 
-      {/* 페이지 제목 */}
       <AdminPageHeader title="회원 관리" />
 
-      {/* 회원 목록 영역 */}
       <div className="bg-white border border-gray-100 shadow-sm">
-
-        {/* 섹션 헤더 — 제목 + 검색창 */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-
-          {/* 좌측 — 섹션 제목 + 총 회원수 */}
           <div className="flex items-center gap-3">
-            {/* 블루 포인트 라인 — 팀 시안 컬러 통일 */}
             <div className="w-1 h-4 bg-blue-700" />
-            <h2 className="text-sm font-semibold text-gray-700 tracking-wide">
-              회원 목록
-            </h2>
-            <span className="text-xs text-gray-400">
-              총 {filteredMembers.length}명
-            </span>
+            <h2 className="text-sm font-semibold text-gray-700 tracking-wide">회원 목록</h2>
+            <span className="text-xs text-gray-400">총 {filteredMembers.length}명</span>
           </div>
-
-          {/* 우측 — 검색창 */}
           <input
             type="text"
             placeholder="이름 또는 이메일 검색"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="
-              w-56 px-3 py-2 text-sm
-              border-b border-gray-300 focus:border-blue-700
-              outline-none transition-colors
-              placeholder:text-gray-300 tracking-wide
-            "
+            className="w-56 px-3 py-2 text-sm border-b border-gray-300 focus:border-blue-700 outline-none transition-colors placeholder:text-gray-300 tracking-wide"
           />
         </div>
 
-        {/* 회원 테이블 */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -141,11 +108,7 @@ const AdminMemberPage = () => {
                 filteredMembers.map((member) => {
                   const style = memberStatusStyles[member.status];
                   return (
-                    <tr
-                      key={member.id}
-                      className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
-                    >
-                      {/* 이름 — 클릭 시 상세 모달 오픈 */}
+                    <tr key={member.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                       <td
                         className="px-5 py-3 text-gray-700 font-medium cursor-pointer hover:text-blue-700 transition-colors"
                         onClick={() => setSelectedMember(member)}
@@ -154,40 +117,50 @@ const AdminMemberPage = () => {
                       </td>
                       <td className="px-5 py-3 text-gray-500">{member.email}</td>
                       <td className="px-5 py-3 text-gray-500">{member.joinDate}</td>
-
-                      {/* 상태 뱃지 */}
                       <td className="px-5 py-3">
                         <span className={`px-2 py-1 text-xs font-medium rounded-sm ${style.badge}`}>
                           {style.label}
                         </span>
                       </td>
 
-                      {/* 관리 버튼 */}
+                      {/* 관리 버튼 — 권한 없으면 비활성화 */}
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2">
-                          {/* 정지 버튼 — 정상 상태일 때만 표시 */}
                           {member.status === "active" && (
                             <button
-                              onClick={() => onChangeStatus(member.id, "suspended")}
-                              className="text-xs text-amber-500 hover:text-amber-700 transition-colors"
+                              onClick={() => hasEditPermission && onChangeStatus(member.id, "suspended")}
+                              disabled={!hasEditPermission}
+                              className={`text-xs transition-colors
+                                ${hasEditPermission
+                                  ? "text-amber-500 hover:text-amber-700"
+                                  : "text-gray-300 cursor-not-allowed"
+                                }`}
                             >
                               정지
                             </button>
                           )}
-                          {/* 정지 해제 버튼 — 정지 상태일 때만 표시 */}
                           {member.status === "suspended" && (
                             <button
-                              onClick={() => onChangeStatus(member.id, "active")}
-                              className="text-xs text-blue-500 hover:text-blue-700 transition-colors"
+                              onClick={() => hasEditPermission && onChangeStatus(member.id, "active")}
+                              disabled={!hasEditPermission}
+                              className={`text-xs transition-colors
+                                ${hasEditPermission
+                                  ? "text-blue-500 hover:text-blue-700"
+                                  : "text-gray-300 cursor-not-allowed"
+                                }`}
                             >
                               정지해제
                             </button>
                           )}
-                          {/* 탈퇴 버튼 — 탈퇴 상태가 아닐 때만 표시 */}
                           {member.status !== "withdrawn" && (
                             <button
-                              onClick={() => onChangeStatus(member.id, "withdrawn")}
-                              className="text-xs text-red-500 hover:text-red-700 transition-colors"
+                              onClick={() => hasEditPermission && onChangeStatus(member.id, "withdrawn")}
+                              disabled={!hasEditPermission}
+                              className={`text-xs transition-colors
+                                ${hasEditPermission
+                                  ? "text-red-500 hover:text-red-700"
+                                  : "text-gray-300 cursor-not-allowed"
+                                }`}
                             >
                               탈퇴
                             </button>
@@ -203,7 +176,7 @@ const AdminMemberPage = () => {
         </div>
       </div>
 
-      {/* ── 회원 상세 모달 ── */}
+      {/* 회원 상세 모달 */}
       {selectedMember && (
         <div
           className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
@@ -213,24 +186,14 @@ const AdminMemberPage = () => {
             className="bg-white w-full max-w-md mx-4 shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* 모달 헤더 */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
-                {/* 블루 포인트 라인 */}
                 <div className="w-1 h-4 bg-blue-700" />
-                <h3 className="text-sm font-semibold text-gray-700">
-                  회원 상세 정보
-                </h3>
+                <h3 className="text-sm font-semibold text-gray-700">회원 상세 정보</h3>
               </div>
-              <button
-                onClick={() => setSelectedMember(null)}
-                className="text-gray-300 hover:text-gray-500 transition-colors text-lg"
-              >
-                ✕
-              </button>
+              <button onClick={() => setSelectedMember(null)} className="text-gray-300 hover:text-gray-500 transition-colors text-lg">✕</button>
             </div>
 
-            {/* 모달 내용 */}
             <div className="px-6 py-5 space-y-4">
               {[
                 { label: "이름",   value: selectedMember.name     },
@@ -243,8 +206,6 @@ const AdminMemberPage = () => {
                   <span className="text-sm text-gray-700">{row.value}</span>
                 </div>
               ))}
-
-              {/* 상태 */}
               <div className="flex items-center border-b border-gray-50 pb-3">
                 <span className="w-20 text-xs text-gray-400 tracking-wide">상태</span>
                 <span className={`px-2 py-1 text-xs font-medium rounded-sm ${memberStatusStyles[selectedMember.status].badge}`}>
@@ -253,36 +214,47 @@ const AdminMemberPage = () => {
               </div>
             </div>
 
-            {/* 모달 하단 — 처리 버튼 */}
+            {/* 모달 하단 버튼 — 권한 없으면 비활성화 */}
             <div className="flex gap-2 px-6 py-4 border-t border-gray-100">
-              {/* 정지 버튼 */}
               {selectedMember.status === "active" && (
                 <button
-                  onClick={() => onChangeStatus(selectedMember.id, "suspended")}
-                  className="flex-1 py-2 text-sm text-amber-600 border border-amber-300 hover:bg-amber-50 transition-colors"
+                  onClick={() => hasEditPermission && onChangeStatus(selectedMember.id, "suspended")}
+                  disabled={!hasEditPermission}
+                  className={`flex-1 py-2 text-sm border transition-colors
+                    ${hasEditPermission
+                      ? "text-amber-600 border-amber-300 hover:bg-amber-50"
+                      : "text-gray-300 border-gray-200 cursor-not-allowed"
+                    }`}
                 >
                   정지 처리
                 </button>
               )}
-              {/* 정지 해제 버튼 */}
               {selectedMember.status === "suspended" && (
                 <button
-                  onClick={() => onChangeStatus(selectedMember.id, "active")}
-                  className="flex-1 py-2 text-sm text-blue-600 border border-blue-300 hover:bg-blue-50 transition-colors"
+                  onClick={() => hasEditPermission && onChangeStatus(selectedMember.id, "active")}
+                  disabled={!hasEditPermission}
+                  className={`flex-1 py-2 text-sm border transition-colors
+                    ${hasEditPermission
+                      ? "text-blue-600 border-blue-300 hover:bg-blue-50"
+                      : "text-gray-300 border-gray-200 cursor-not-allowed"
+                    }`}
                 >
                   정지 해제
                 </button>
               )}
-              {/* 탈퇴 버튼 */}
               {selectedMember.status !== "withdrawn" && (
                 <button
-                  onClick={() => onChangeStatus(selectedMember.id, "withdrawn")}
-                  className="flex-1 py-2 text-sm text-white bg-red-500 hover:bg-red-600 transition-colors"
+                  onClick={() => hasEditPermission && onChangeStatus(selectedMember.id, "withdrawn")}
+                  disabled={!hasEditPermission}
+                  className={`flex-1 py-2 text-sm transition-colors
+                    ${hasEditPermission
+                      ? "text-white bg-red-500 hover:bg-red-600"
+                      : "text-gray-300 bg-gray-100 cursor-not-allowed"
+                    }`}
                 >
                   탈퇴 처리
                 </button>
               )}
-              {/* 닫기 버튼 */}
               <button
                 onClick={() => setSelectedMember(null)}
                 className="flex-1 py-2 text-sm text-gray-400 border border-gray-200 hover:bg-gray-50 transition-colors"

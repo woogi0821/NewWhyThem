@@ -1,39 +1,52 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-// ─────────────────────────────────────────────
-// 컴포넌트
-// ─────────────────────────────────────────────
-
 const AdminLoginPage = () => {
   const navigate = useNavigate();
 
-  // ── 상태 관리 ──────────────────────────────
-
-  // 아이디 / 비밀번호 입력값
   const [id, setId] = useState("");
   const [password, setPassword] = useState("");
-
-  // 에러 메시지 상태
-  // 로그인 실패 시 표시
   const [errorMsg, setErrorMsg] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // ── 로그인 처리 ─────────────────────────────
+  const onLogin = async () => {
+    if (!id || !password) {
+      setErrorMsg("아이디와 비밀번호를 입력해주세요");
+      return;
+    }
 
-  const onLogin = () => {
-    // 임시 로그인 — 나중에 API 연결 시 교체
-    // 현재는 아이디/비밀번호 둘 다 "admin" 이면 통과
-    if (id === "admin" && password === "admin") {
-      // localStorage 에 임시 토큰 저장
-      // 나중에 서버에서 받은 JWT 토큰으로 교체
-      localStorage.setItem("adminToken", "temp_admin_token");
+    setLoading(true);
+    setErrorMsg("");
+
+    try {
+      const response = await fetch("http://localhost:8080/api/admins/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ loginId: id, loginPw: password }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        setErrorMsg(data?.message || "아이디 또는 비밀번호가 올바르지 않습니다");
+        return;
+      }
+
+      const data = await response.json();
+
+      localStorage.setItem("adminToken", data.accessToken);
+      localStorage.setItem("adminRole", data.adminRole);
+      localStorage.setItem("adminId", String(data.adminId));
+      localStorage.setItem("adminPart", data.adminPart);
+
       navigate("/admin");
-    } else {
-      setErrorMsg("아이디 또는 비밀번호가 올바르지 않습니다");
+
+    } catch (e) {
+      setErrorMsg("서버 연결에 실패했습니다");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 엔터키로도 로그인 가능하도록
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") onLogin();
   };
@@ -44,7 +57,6 @@ const AdminLoginPage = () => {
 
         {/* 헤더 */}
         <div className="flex items-center gap-3 px-8 py-6 border-b border-gray-100">
-          {/* 블루 포인트 라인 — 팀 시안 컬러 통일 */}
           <div className="w-1 h-5 bg-blue-700" />
           <span className="text-sm font-semibold tracking-widest text-gray-800 uppercase">
             Admin
@@ -94,7 +106,7 @@ const AdminLoginPage = () => {
 
           {/* 에러 메시지 */}
           {errorMsg && (
-            <p className="text-xs text-blue-700 tracking-wide">
+            <p className="text-xs text-red-500 tracking-wide">
               {errorMsg}
             </p>
           )}
@@ -104,11 +116,13 @@ const AdminLoginPage = () => {
         <div className="px-8 pb-6">
           <button
             onClick={onLogin}
-            className="w-full py-2.5 text-sm text-white bg-blue-700 hover:bg-blue-800 transition-colors"
+            disabled={loading}
+            className="w-full py-2.5 text-sm text-white bg-blue-700 hover:bg-blue-800 transition-colors disabled:opacity-50"
           >
-            로그인
+            {loading ? "로그인 중..." : "로그인"}
           </button>
         </div>
+
       </div>
     </div>
   );
