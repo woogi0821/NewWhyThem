@@ -85,7 +85,7 @@ export const useToast = () => {
   const showToast = useCallback(
     (message: string, options: ShowToastOptions = {}) => {
       // 옵션에서 값을 꺼내고 없으면 기본값 사용
-      const { variant = "info", position = "top-right", duration = 3000 } = options;
+      const { variant = "info", position = "bottom-center", duration = 3000 } = options;
 
       // 이전 타이머가 남아있으면 먼저 제거
       // 예) 토스트가 떠 있는 중에 또 showToast 를 호출하면
