@@ -1,8 +1,11 @@
 package com.simplecoding.chargerreservation.station.service;
 
-import com.simplecoding.chargerreservation.charger.dto.MarkerDto;
+import com.simplecoding.chargerreservation.common.MapStruct;
+import com.simplecoding.chargerreservation.station.dto.MarkerDto;
+import com.simplecoding.chargerreservation.charger.entity.ChargerEntity;
 import com.simplecoding.chargerreservation.station.dto.StationDto;
 import com.simplecoding.chargerreservation.station.entity.StationEntity;
+import com.simplecoding.chargerreservation.station.repository.MarkerProjection;
 import com.simplecoding.chargerreservation.station.repository.StationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,74 +30,144 @@ public class StationService {
 
     private final JdbcTemplate jdbcTemplate;
     private final StationRepository stationRepository;
+    private final com.simplecoding.chargerreservation.charger.repository.ChargerRepository chargerRepository;
+    private final MapStruct mapStruct;
 
     // ==========================================
-    // 1. 조회 로직 (Repository & DTO 활용)
+    // 1. 데이터 조회 및 검색 로직 (사용자 API용)
     // ==========================================
 
     /**
-     * 반경 3km 이내의 충전소를 조회하여 마커 DTO 리스트로 반환
+     * [기능] 지도 표시용 마커 데이터 조회 (최적화 버전)
+     * - 반경 3km 이내의 충전소를 100개씩 끊어서 가져옵니다.
+     * - 지도에는 많은 정보가 필요 없으므로 필수 좌표 정보(MarkerDto)만 반환하여 가볍게 유지합니다.
      */
     @Transactional(readOnly = true)
     public List<MarkerDto> getStationMarkers(Double lat, Double lng) {
-        double radius = 3.0; // 3km 반경 고정
+        double radius = 1.5;
+        // MarkerProjection을 통해 DB에서 이미 계산된 통계 데이터를 가져옴
+        List<MarkerProjection> projections = stationRepository.findMarkersWithinRadius(lat, lng, radius);
 
-        // Repository의 하버사인 공식 쿼리 호출
-        List<StationEntity> stations = stationRepository.findStationsWithinRadius(lat, lng, radius);
+        return projections.stream()
+                .map(p -> {
+                    // 1. MapStruct를 통해 Projection -> StationDto로 1차 변환 (주차/개방 정보 자동 포함)
+                    StationDto tempDto = mapStruct.toDto(p);
 
-        log.info("▶ [STATION] 조회된 마커 개수: {}개 (기준 좌표: {}, {})", stations.size(), lat, lng);
+                    // 2. 상태 계산 (기존 로직 유지하되 DTO 메서드 활용)
+                    tempDto.setStatusInfo(
+                            p.getAvailableCount() != null ? p.getAvailableCount() : 0,
+                            p.getTotalCount() != null ? p.getTotalCount() : 0,
+                            p.getBrokenCount() != null ? p.getBrokenCount() : 0
+                    );
 
-        return stations.stream()
-                .map(s -> new MarkerDto(
-                        s.getStatId(),
-                        s.getLat(),
-                        s.getLng(),
-                        "1" // 기본 상태값
-                ))
+                    // 3. MarkerDto로 최종 변환 (화면 전달용 가벼운 객체)
+                    return MarkerDto.builder()
+                            .statId(p.getStatId())
+                            .statNm(p.getStatNm()) // 👈 tempDto.getStatNm() 대신 p.getStatNm() 사용!
+                            .lat(p.getLat())
+                            .lng(p.getLng())
+                            .markerColor(tempDto.getMarkerColor())
+                            .warningLevel(tempDto.getWarningLevel())
+                            .occupancy(tempDto.getOccupancy())
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 
     /**
-     * 충전소 상세 정보 조회
+     * [기능] 주변 충전소 목록 조회 (상세 정보 포함 리스트)
+     * - 마커 조회와 비슷하지만, 충전소 이름, 주소 등 상세 정보를 담은 StationDto를 반환합니다.
+     * - 무한 스크롤이나 목록 페이징 UI에 사용됩니다.
+     */
+    @Transactional(readOnly = true)
+    public List<StationDto> getStationsWithDistancePaged(Double lat, Double lng, int page) {
+        // 1. 상수 및 현재 환경 설정 (실제로는 날짜 기반 유틸리티 사용 권장)
+        int year = 2026;
+        String season = "봄가을";
+        String type = "급속"; // 목록에서 기본으로 보여줄 타입 (필요시 파라미터로 받음)
+
+        Set<String> fastTypes = Set.of("01", "03", "04", "05", "06", "08");
+        Set<String> brokenStats = Set.of("1", "4", "5");
+
+        // 2. Repository 호출 (수정된 파라미터 반영: type, year, season 추가)
+        // [중요] Repository에서 p.unitPrice AS currentPrice를 가져오도록 쿼리가 수정되어 있어야 함
+        List<MarkerProjection> list = stationRepository.findStationsWithinRadiusWithPaging(
+                lat, lng, 1.5, type, year, season, page * 20, 20);
+
+        return list.stream()
+                .map(p -> {
+                    // 1. MapStruct 및 기본 정보 세팅
+                    StationDto dto = mapStruct.toDto(p);
+                    dto.setStatNm(p.getStatNm());
+                    dto.setAddr(p.getAddr());
+                    dto.setDistance(p.getDistance());
+                    dto.setBnm(p.getBnm()); // 운영사 정보 확인
+                    dto.setCurrentPrice(p.getCurrentPrice());
+
+                    // ✨ [신규] 조인된 요금 정보 세팅 (규칙 2)
+                    // MarkerProjection에 Double getCurrentPrice()가 추가되어 있어야 합니다.
+                    dto.setCurrentPrice(p.getCurrentPrice());
+
+                    // 2. 충전기 상세 현황 계산
+                    // Tip: 성능 최적화가 필요하다면 이 부분을 In절 쿼리로 한방에 가져오는게 좋음
+                    List<ChargerEntity> chargers = chargerRepository.findByStatId(p.getStatId());
+
+                    int total = chargers.size();
+                    int available = (int) chargers.stream().filter(c -> "2".equals(c.getStat())).count();
+                    int broken = (int) chargers.stream().filter(c -> brokenStats.contains(c.getStat())).count();
+
+                    dto.setStatusInfo(available, total, broken);
+
+                    // 3. 급속/완속 상세 텍스트 세팅
+                    Map<Boolean, List<ChargerEntity>> split = chargers.stream()
+                            .collect(Collectors.partitioningBy(c -> fastTypes.contains(c.getChargerType())));
+
+                    processTypeDetail(dto, "급속", split.get(true), brokenStats);
+                    processTypeDetail(dto, "완속", split.get(false), brokenStats);
+
+                    return dto;
+                }).collect(Collectors.toList());
+    }
+
+    /**
+     * [기능] 충전소 상세 정보 단건 조회
+     * - 특정 마커를 클릭했을 때 해당 충전소 1개의 상세 정보를 가져옵니다.
+     * - 테스트 코드에서 호출하는 핵심 메서드입니다.
      */
     @Transactional(readOnly = true)
     public StationDto getStationDetail(String statId) {
-        StationEntity station = stationRepository.findById(statId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 충전소를 찾을 수 없습니다. ID: " + statId));
+        StationEntity entity = stationRepository.findById(statId)
+                .orElseThrow(() -> new RuntimeException("해당 충전소를 찾을 수 없습니다. ID: " + statId));
 
-        return StationDto.builder()
-                .statId(station.getStatId())
-                .statNm(station.getStatNm())
-                .addr(station.getAddr())
-                .location(station.getLocation())
-                .lat(station.getLat())
-                .lng(station.getLng())
-                .useTime(station.getUseTime())
-                .bnm(station.getBnm())
-                .zcode(station.getZcode())
-                .zscode(station.getZscode())
-                .kind(station.getKind())
-                .parkingFree(station.getParkingFree())
-                .limitYn(station.getLimitYn())
-                .limitDetail(station.getLimitDetail())
-                .build();
+        // [수정] 수동 fromEntity 삭제 -> MapStruct 사용
+        return mapStruct.toDto(entity);
     }
-
-
+    /**
+     * [기능] 충전소 통합 검색
+     * - 검색어(키워드)를 입력받아 충전소명이나 주소 등에서 일치하는 데이터를 찾습니다.
+     * - 좌표 기준이 아니므로 거리순 정렬보다는 매칭 결과 위주로 반환합니다.
+     */
     @Transactional(readOnly = true)
     public List<StationDto> searchStations(String keyword) {
-        if (keyword == null || keyword.trim().isEmpty()) {
-            return List.of();
-        }
+        if (keyword == null || keyword.trim().isEmpty()) return List.of();
 
-        // 1. Repository에서 엔티티 리스트 조회
         List<StationEntity> entities = stationRepository.findByIntegratedSearch(keyword.trim());
 
-        // 2. DTO에 이미 있는 [fromEntity] 메서드 사용!
+        // [수정] 수동 루프 삭제 -> MapStruct 스트림 활용
         return entities.stream()
-                .map(StationDto::fromEntity) // ◀ StationDto에 있는 메서드 이름으로 호출
+                .map(mapStruct::toDto)
                 .collect(Collectors.toList());
     }
+
+// 보조 메서드: 타입별 상태 세팅 (코드 중복 방지)
+private void processTypeDetail(StationDto dto, String type, List<ChargerEntity> list, Set<String> brokenStats) {
+    if (list.isEmpty()) return;
+    int total = list.size();
+    int avail = (int) list.stream().filter(c -> "2".equals(c.getStat())).count();
+    int broken = (int) list.stream().filter(c -> brokenStats.contains(c.getStat())).count();
+    dto.setTypeDetailStatus(type, avail, total, broken);
+}
+
 
 
     // ==========================================
@@ -113,7 +186,7 @@ public class StationService {
         List<JSONObject> buffer = new ArrayList<>();
 
         int pageNo = 1;
-        int numOfRows = 5000;
+        int numOfRows = 9999;
         boolean hasMore = true;
 
         log.info("▶▶▶ [STATION] 수집 시작");
@@ -154,7 +227,7 @@ public class StationService {
 
                 log.info("✔ {}페이지 완료 / 현재 누적 유니크 충전소: {}", pageNo, statIdSet.size());
 
-                if (buffer.size() >= 5000) {
+                if (buffer.size() >= 10000) {
                     executeBatchMerge(buffer);
                     buffer.clear();
                 }
@@ -239,9 +312,3 @@ public class StationService {
 
 }
 
-// StationService 클래스 내부 어디든 상관없지만, 보통 맨 아래에 둡니다.
-
-/**
- * [도움 메서드] Entity 객체를 DTO 객체로 변환합니다.
- * 이 메서드가 있어야 searchStations와 getStationDetail의 빨간 줄이 사라집니다.
- */

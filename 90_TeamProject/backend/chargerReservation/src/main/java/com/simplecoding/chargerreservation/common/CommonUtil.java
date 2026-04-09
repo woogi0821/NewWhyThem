@@ -1,5 +1,6 @@
 package com.simplecoding.chargerreservation.common;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
@@ -82,6 +83,21 @@ public class CommonUtil {
                 .path("/api/download/"+path+"/{uuid}")  // 경로    : /download/fileDb/{uuid}
                 .buildAndExpand(uuid)                   // 파라메터방식: uuid 값넣기
                 .toUriString();                         // 위에꺼조합:
-
     }
+
+    // IP 추출을 위한 헬퍼 메서드
+    public String getClientIp(HttpServletRequest request) {
+        String[] headers = {"X-Forwarded-For", "Proxy-Client-IP", "WL-Proxy-Client-IP", "HTTP_CLIENT_IP", "HTTP_X_FORWARDED_FOR"};
+        String ip = null;
+
+        for (String header : headers) {
+            ip = request.getHeader(header);
+            if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) break;
+        }
+
+        if (ip == null) ip = request.getRemoteAddr();
+
+        return ip.contains(",") ? ip.split(",")[0].trim() : ip;
+    }
+
 }

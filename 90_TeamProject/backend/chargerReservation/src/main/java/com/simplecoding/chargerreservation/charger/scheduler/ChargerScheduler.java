@@ -18,9 +18,15 @@ public class ChargerScheduler {
      * 주기: 5분 (300,000ms)
      * 역할: 공공 API를 호출하여 변동된 충전기 상태를 DB에 동기화함.
      */
+<<<<<<< HEAD
     @Scheduled(fixedDelay = 300000)
     public void updateChargerStatus() {
         log.info("⏰ [ChargerScheduler] 실시간 상태 동기화 시작 (5분 주기)");
+=======
+    @Scheduled(fixedDelay = 600000)
+    public void updateChargerStatus() {
+        log.info("⏰ [ChargerScheduler] 실시간 상태 동기화 시작 (10분 주기)");
+>>>>>>> origin/Test_Table
 
         try {
             // 정해진 패키지 내의 ChargerService 호출

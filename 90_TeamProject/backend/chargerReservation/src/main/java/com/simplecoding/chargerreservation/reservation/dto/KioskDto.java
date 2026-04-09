@@ -12,4 +12,19 @@ public class KioskDto {
         @NotBlank(message = "핀번호 4자리를 입력 해주세요.")
         private String pin;
     }
+
+    @Getter
+    public static class StopRequest {
+        @NotBlank(message = "충전기 ID가 필요합니다.")
+        private String chargerId;
+
+        @NotBlank(message = "핀번호 4자리를 입력 해주세요.")
+        private String pin;
+    }
+
+    @Getter
+    public static class EndRequest {
+        @NotBlank(message = "충전기 ID가 필요합니다.")
+        private String chargerId;
+    }
 }
